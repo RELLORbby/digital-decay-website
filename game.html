@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <title>Decay Interactive Game</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Return to main site button -->
+    <button class="main-site-button" onclick="returnToMainSite()">
+      ← Return to Main Site
+    </button>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen start-screen active">
+      <div class="start-particles" id="startParticles"></div>
+      <div class="start-glitch-rectangles" id="startGlitchRectangles"></div>
+      <div class="start-content">
+        <h1 class="start-title">DIGITAL DECAY</h1>
+        <p class="start-subtitle">(press ENTER to start)</p>
+      </div>
+    </div>
+
+    <!-- Main Screen -->
+    <div id="mainScreen" class="screen main-screen">
+      <div class="floating-objects" id="floatingObjects"></div>
+      <div class="main-instructions">
+        <p>Click anywhere to start a random game</p>
+      </div>
+      <div class="decay-bar">
+        <div class="decay-progress" id="decayProgress"></div>
+        <div class="decay-percent" id="decayPercent">100%</div>
+      </div>
+    </div>
+
+    <!-- Game 1: Grid Game -->
+    <div id="game1" class="screen grid-game">
+      <button class="back-button" onclick="goToMain()">Back</button>
+      <div class="game-grid" id="gameGrid"></div>
+      <div class="decay-bar">
+        <div class="decay-progress" id="decayProgress1"></div>
+        <div class="decay-percent" id="decayPercent1">100%</div>
+      </div>
+    </div>
+
+    <!-- Game 2: Bounce Game -->
+    <div id="game2" class="screen bounce-game">
+      <button class="back-button" onclick="goToMain()">Back</button>
+      <canvas id="bounceCanvas" class="bounce-canvas"></canvas>
+      <div class="decay-bar">
+        <div class="decay-progress" id="decayProgress2"></div>
+        <div class="decay-percent" id="decayPercent2">100%</div>
+      </div>
+    </div>
+
+    <!-- Game 3: Simon Says -->
+    <div id="game3" class="screen simon-game">
+      <button class="back-button" onclick="goToMain()">Back</button>
+      <div class="simon-container">
+        <div class="simon-animation" id="simonAnimation"></div>
+        <div class="simon-instruction" id="simonInstruction">
+          Get ready for Simon Says!
+        </div>
+        <div class="simon-sequence" id="simonSequence"></div>
+        <div class="simon-status" id="simonStatus"></div>
+      </div>
+      <div class="decay-bar">
+        <div class="decay-progress" id="decayProgress3"></div>
+        <div class="decay-percent" id="decayPercent3">100%</div>
+      </div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="endScreen" class="screen end-screen">
+      <div class="terminal-background">
+        <!-- Terminal grid lines -->
+        <div class="terminal-grid" id="terminalGrid"></div>
+
+        <!-- Glitchy rectangles -->
+        <div class="glitch-rectangles" id="glitchRectangles"></div>
+
+        <!-- Main content -->
+        <div class="end-content">
+          <h1 class="end-title">DECAY COMPLETE</h1>
+          <p class="end-subtitle">
+            Press ENTER to restart<br />(Auto-restart in
+            <span id="countdown">30</span>s)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Include JavaScript files -->
+    <script src="game-data.js"></script>
+    <script src="screen-manager.js"></script>
+    <script src="decay-system.js"></script>
+    <script src="floating-objects.js"></script>
+    <script src="game1-grid.js"></script>
+    <script src="game2-bounce.js"></script>
+    <script src="game3-simon.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>

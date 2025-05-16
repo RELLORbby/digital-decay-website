@@ -1,0 +1,738 @@
+/* Import custom font */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("assets/fonts/JetBrainsMono-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #1a1a1a;
+  color: #ffffff;
+  font-family: "JetBrains Mono", "Courier New", monospace; /* Updated to use custom font */
+  overflow: hidden;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 12" fill="white"><circle cx="12" cy="12" r="8" fill="none" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="white"/></svg>')
+      12 12,
+    auto;
+}
+
+.screen {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  display: none;
+  z-index: 10;
+}
+
+.screen.active {
+  display: flex !important;
+  z-index: 100;
+}
+
+/* Start Screen */
+.start-screen {
+  background: #000000; /* Changed to black */
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.start-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+}
+
+.start-title {
+  font-size: 4rem;
+  margin-bottom: 2rem;
+  color: #b8d3a7; /* Fresh green from first decay stage */
+  animation: pulse 2s infinite, startTextGlitch 2s infinite;
+  text-shadow: 0 0 10px #b8d3a7;
+}
+
+.start-subtitle {
+  font-size: 1.5rem;
+  color: #b8d3a7; /* Fresh green from first decay stage */
+  animation: fadeIn 2s ease-in, startSubtitleGlitch 3s infinite;
+}
+
+/* Particle grid effect for start screen - more glitchy */
+.start-screen::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(#b8d3a7 1px, transparent 1px),
+    linear-gradient(90deg, #b8d3a7 1px, transparent 1px);
+  background-size: 50px 50px;
+  opacity: 0.1; /* Control visibility with opacity instead of RGBA */
+  animation: startGridGlitch 1.5s infinite;
+  z-index: 1;
+}
+
+.start-title,
+.start-subtitle {
+  z-index: 2;
+  position: relative;
+}
+
+/* Start screen glitch rectangles */
+.start-glitch-rectangles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.start-glitch-rect {
+  position: absolute;
+  background: #b8d3a7;
+  opacity: 0.3;
+  animation: startGlitchRect 2s infinite ease-in-out;
+}
+
+@keyframes startGridGlitch {
+  0%,
+  60%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.1;
+  }
+  65% {
+    transform: translate(3px, -2px);
+    opacity: 0.3;
+  }
+  70% {
+    transform: translate(-2px, 3px);
+    opacity: 0.05;
+  }
+  75% {
+    transform: translate(1px, -3px);
+    opacity: 0.25;
+  }
+  80% {
+    transform: translate(-3px, 1px);
+    opacity: 0.15;
+  }
+}
+
+@keyframes startTextGlitch {
+  0%,
+  85%,
+  100% {
+    transform: translate(0, 0);
+    filter: brightness(1);
+    text-shadow: 0 0 10px #b8d3a7;
+  }
+  87% {
+    transform: translate(2px, 0);
+    filter: brightness(1.3);
+    text-shadow: 2px 0 #b8d3a7, -2px 0 #b8d3a7, 0 0 20px #b8d3a7;
+  }
+  89% {
+    transform: translate(-2px, 0);
+    filter: brightness(0.8);
+    text-shadow: -1px 0 #b8d3a7, 1px 0 #b8d3a7, 0 0 5px #b8d3a7;
+  }
+  91% {
+    transform: translate(1px, 0);
+    filter: brightness(1.2);
+    text-shadow: 1px 0 #b8d3a7, -1px 0 #b8d3a7, 0 0 15px #b8d3a7;
+  }
+}
+
+@keyframes startSubtitleGlitch {
+  0%,
+  90%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  92% {
+    opacity: 0.7;
+    transform: translate(1px, 0);
+  }
+  94% {
+    opacity: 1.2;
+    transform: translate(-1px, 0);
+  }
+  96% {
+    opacity: 0.8;
+    transform: translate(0, 1px);
+  }
+}
+
+@keyframes startGlitchRect {
+  0% {
+    opacity: 0;
+    transform: scale(1, 1);
+  }
+  25% {
+    opacity: 0.5;
+    transform: scale(1.3, 0.7);
+  }
+  50% {
+    opacity: 0.2;
+    transform: scale(0.6, 1.5);
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(1.1, 0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1, 1);
+  }
+}
+
+.start-title,
+.start-subtitle {
+  z-index: 2;
+  position: relative;
+}
+
+@keyframes gridGlitch {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  50% {
+    opacity: 0.3;
+    transform: translate(2px, -2px);
+  }
+  75% {
+    opacity: 0.5;
+    transform: translate(-1px, 1px);
+  }
+}
+
+@keyframes textGlitch {
+  0%,
+  90%,
+  100% {
+    transform: translate(0, 0);
+  }
+  91% {
+    transform: translate(2px, 0);
+  }
+  92% {
+    transform: translate(-2px, 0);
+  }
+  93% {
+    transform: translate(1px, 0);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* End Screen */
+.end-screen {
+  background: #1a2420;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.terminal-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #1a2420;
+}
+
+.terminal-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.3;
+  background-image: linear-gradient(90deg, #5a8c7b 1px, transparent 1px),
+    linear-gradient(180deg, #5a8c7b 1px, transparent 1px);
+  background-size: 40px 24px;
+  animation: endGridGlitch 1s infinite;
+}
+
+.glitch-rectangles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.glitch-rect {
+  position: absolute;
+  background: #5a8c7b;
+  opacity: 0.7;
+  animation: endGlitchRect 1s infinite ease-in-out;
+}
+
+.end-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.end-title {
+  font-size: 4rem;
+  margin-bottom: 2rem;
+  color: #5a8c7b; /* Final decay bar color */
+  animation: pulse 2s infinite, endTerminalGlitch 1.5s infinite;
+  font-family: "JetBrains Mono", "Courier New", monospace; /* Updated to use custom font */
+  text-shadow: 0 0 10px #5a8c7b;
+}
+
+.end-subtitle {
+  font-size: 1.5rem;
+  color: #5a8c7b; /* Final decay bar color */
+  animation: fadeIn 2s ease-in, endSubtitleGlitch 2s infinite;
+  font-family: "JetBrains Mono", "Courier New", monospace; /* Updated to use custom font */
+}
+
+@keyframes endGridGlitch {
+  0%,
+  50%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.3;
+  }
+  55% {
+    transform: translate(3px, -2px);
+    opacity: 0.6;
+  }
+  60% {
+    transform: translate(-2px, 3px);
+    opacity: 0.1;
+  }
+  65% {
+    transform: translate(2px, -3px);
+    opacity: 0.5;
+  }
+  70% {
+    transform: translate(-3px, 2px);
+    opacity: 0.2;
+  }
+  75% {
+    transform: translate(1px, 1px);
+    opacity: 0.4;
+  }
+}
+
+@keyframes endGlitchRect {
+  0% {
+    opacity: 0;
+    transform: scale(1, 1) rotate(0deg);
+  }
+  15% {
+    opacity: 0.9;
+    transform: scale(1.4, 0.6) rotate(2deg);
+  }
+  30% {
+    opacity: 0.3;
+    transform: scale(0.7, 1.6) rotate(-1deg);
+  }
+  45% {
+    opacity: 0.8;
+    transform: scale(1.2, 0.8) rotate(1deg);
+  }
+  60% {
+    opacity: 0.1;
+    transform: scale(0.8, 1.3) rotate(-2deg);
+  }
+  75% {
+    opacity: 0.6;
+    transform: scale(1.1, 0.9) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1, 1) rotate(0deg);
+  }
+}
+
+@keyframes endTerminalGlitch {
+  0%,
+  80%,
+  100% {
+    filter: brightness(1);
+    text-shadow: 0 0 10px #5a8c7b;
+    transform: translate(0, 0);
+  }
+  82% {
+    filter: brightness(1.4);
+    text-shadow: 3px 0 #5a8c7b, -3px 0 #5a8c7b, 0 0 25px #5a8c7b;
+    transform: translate(2px, 0);
+  }
+  84% {
+    filter: brightness(0.7);
+    text-shadow: -2px 0 #5a8c7b, 2px 0 #5a8c7b, 0 0 5px #5a8c7b;
+    transform: translate(-2px, 0);
+  }
+  86% {
+    filter: brightness(1.3);
+    text-shadow: 1px 0 #5a8c7b, -1px 0 #5a8c7b, 0 0 20px #5a8c7b;
+    transform: translate(1px, 0);
+  }
+  88% {
+    filter: brightness(0.9);
+    text-shadow: 0 0 15px #5a8c7b;
+    transform: translate(0, 1px);
+  }
+}
+
+@keyframes endSubtitleGlitch {
+  0%,
+  85%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  87% {
+    opacity: 0.6;
+    transform: translate(1px, 0);
+  }
+  89% {
+    opacity: 1.3;
+    transform: translate(-1px, 0);
+  }
+  91% {
+    opacity: 0.8;
+    transform: translate(0, -1px);
+  }
+  93% {
+    opacity: 1.1;
+    transform: translate(1px, 1px);
+  }
+}
+
+/* Main Screen */
+.main-screen {
+  background: #0a0a0a;
+  position: relative;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.floating-objects {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Decay Bar */
+.decay-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
+  height: 30px;
+  background: #333;
+
+  overflow: hidden;
+}
+
+.decay-progress {
+  height: 100%;
+  /* Removed the gradient - color will be set dynamically by JavaScript */
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.decay-percent {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: white;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Back Button */
+.back-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  background: #5a8c5a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.back-button:hover {
+  background: #4a7a4a;
+}
+
+/* Game 1 - Grid Game */
+.grid-game {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #1a1a1a;
+  padding: 20px;
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    13,
+    1fr
+  ); /* Use fraction units instead of fixed pixels */
+  grid-template-rows: repeat(7, 1fr);
+  gap: 4px; /* Slightly larger gap */
+  padding: 20px;
+  background: #333;
+  border-radius: 10px;
+  width: 90vw; /* Take up 90% of viewport width */
+  height: 70vh; /* Take up 70% of viewport height */
+  max-width: 1200px; /* Maximum width */
+  max-height: 800px; /* Maximum height */
+}
+
+.grid-cell {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 3px;
+}
+
+.grid-cell:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+  border-color: #aaa;
+}
+
+/* Game 2 - Bounce Game */
+.bounce-game {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background: #1a1a1a;
+}
+
+.bounce-canvas {
+  width: 100%;
+  height: 100vh;
+  display: block;
+}
+
+/* Game 3 - Simon Says */
+.simon-game {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;
+  position: relative;
+}
+
+.simon-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.simon-animation {
+  width: 70vw; /* Take up 70% of viewport width */
+  height: 50vh; /* Take up 50% of viewport height */
+  margin-bottom: 30px;
+  background: #000;
+  /* Removed border */
+}
+
+.simon-instruction {
+  font-size: 1.8rem;
+  color: #8fb889;
+  margin-bottom: 25px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  border: 1px solid #5a8c5a;
+}
+
+.simon-sequence {
+  font-size: 2rem;
+  color: #b8d3a7;
+  margin-bottom: 25px;
+  min-height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.simon-status {
+  font-size: 1.3rem;
+  margin-top: 20px;
+  min-height: 40px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  border: 1px solid #5a8c5a;
+}
+
+.key-display {
+  display: inline-block;
+  padding: 15px 20px;
+  background: #333;
+  border-radius: 8px;
+  margin: 0 5px;
+  font-family: "JetBrains Mono", "Courier New", monospace; /* Updated to use custom font */
+  font-size: 1.5rem;
+  color: #b8d3a7;
+  border: 2px solid #5a8c5a;
+}
+
+/* Main Screen Instructions */
+.main-instructions {
+  position: absolute;
+  bottom: 80px; /* Position above the decay bar (50px + 30px decay bar height) */
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 15px 30px;
+  border-radius: 8px;
+  border: 1px solid #5a8c5a;
+  z-index: 10;
+}
+
+.main-instructions p {
+  color: #b8d3a7;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Return to main site button */
+.main-site-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 10px 20px;
+  background: #4a7a4a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  z-index: 1000;
+}
+
+.main-site-button:hover {
+  background: #5a8c5a;
+}
+
+/* Particle effects for start screen */
+.start-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.matrix-char {
+  position: absolute;
+  color: #b8d3a7; /* Fresh green from first decay stage */
+  font-family: "JetBrains Mono", "Courier New", monospace; /* Updated to use custom font */
+  font-size: 12px;
+  opacity: 0.7;
+  animation: matrixFall 4s infinite linear;
+}
+
+.dot-particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: #b8d3a7; /* Fresh green from first decay stage */
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: twinkle 3s infinite ease-in-out;
+}
+
+@keyframes matrixFall {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
