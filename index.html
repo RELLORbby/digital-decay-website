@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Decay Project</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background: #1a1a1a;
+        color: #ffffff;
+        overflow-x: hidden;
+        /* Custom cursor */
+        cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white"><circle cx="12" cy="12" r="8" fill="none" stroke="white" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="white"/></svg>')
+            12 12,
+          auto;
+      }
+
+      /* Start Page Styles */
+      .start-page {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(45deg, #2c3e2d, #1a2420);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .svg-container {
+        display: flex;
+        gap: 3rem;
+        margin-bottom: 4rem;
+      }
+
+      .fade-svg {
+        opacity: 0;
+        transform: translateY(30px);
+        animation: fadeInUp 2s ease-out forwards;
+      }
+
+      .fade-svg:nth-child(1) {
+        animation-delay: 0.5s;
+      }
+
+      .fade-svg:nth-child(2) {
+        animation-delay: 1s;
+      }
+
+      .fade-svg:nth-child(3) {
+        animation-delay: 1.5s;
+      }
+
+      @keyframes fadeInUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .enter-prompt {
+        font-size: 1.5rem;
+        text-align: center;
+        opacity: 0;
+        animation: fadeIn 1s ease-out 3s forwards;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      @keyframes fadeIn {
+        to {
+          opacity: 1;
+        }
+      }
+
+      .enter-prompt::after {
+        content: "";
+        display: inline-block;
+        width: 2px;
+        height: 1.5rem;
+        background: #ffffff;
+        margin-left: 5px;
+        animation: blink 1s infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* Main Site Styles */
+      .main-site {
+        display: none;
+        min-height: 100vh;
+        background: #0a0a0a;
+      }
+
+      .header {
+        text-align: center;
+        padding: 3rem 0;
+        background: linear-gradient(135deg, #2d4a2d, #1a2e1c);
+      }
+
+      .header h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #b8d3a7;
+      }
+
+      .header p {
+        font-size: 1.2rem;
+        color: #8fb889;
+      }
+
+      .content-section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+      }
+
+      .media-card {
+        background: #1a1a1a;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease;
+      }
+
+      .media-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .media-card img,
+      .media-card video {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+      }
+
+      .media-card-content {
+        padding: 1.5rem;
+      }
+
+      .media-card h3 {
+        margin-bottom: 0.5rem;
+        color: #b8d3a7;
+      }
+
+      .btn {
+        background: #5a8c5a;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: background 0.3s ease;
+        margin: 1rem;
+      }
+
+      .btn:hover {
+        background: #4a7a4a;
+      }
+
+      /* PDF Modal */
+      .pdf-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .pdf-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        max-width: 90vw;
+        max-height: 90vh;
+        position: relative;
+      }
+
+      .close-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
+
+      .decay-grid {
+        display: inline-block;
+        margin: 1rem;
+      }
+
+      .grid-cell {
+        width: 30px;
+        height: 30px;
+        display: inline-block;
+        margin: 1px;
+      }
+
+      .grid-row {
+        display: block;
+        height: 32px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Start Page -->
+    <div class="start-page" id="startPage">
+      <div class="svg-container">
+        <!--<div class="fade-svg">
+          <svg
+            width="120"
+            height="120"
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 30 Q40 20 60 30 Q80 40 100 30"
+              stroke="#8fb889"
+              stroke-width="3"
+              fill="none"
+            />
+            <path
+              d="M20 50 Q40 40 60 50 Q80 60 100 50"
+              stroke="#b8d3a7"
+              stroke-width="3"
+              fill="none"
+            />
+            <path
+              d="M20 70 Q40 60 60 70 Q80 80 100 70"
+              stroke="#8fb889"
+              stroke-width="3"
+              fill="none"
+            />
+            <path
+              d="M20 90 Q40 80 60 90 Q80 100 100 90"
+              stroke="#b8d3a7"
+              stroke-width="3"
+              fill="none"
+            />
+            <circle cx="30" cy="30" r="4" fill="#5a8c5a" />
+            <circle cx="50" cy="50" r="4" fill="#5a8c5a" />
+            <circle cx="70" cy="70" r="4" fill="#5a8c5a" />
+            <circle cx="90" cy="90" r="4" fill="#5a8c5a" />
+          </svg>
+        </div>
+
+
+        <div class="fade-svg">
+          <svg
+            width="120"
+            height="120"
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <rect
+              x="10"
+              y="10"
+              width="25"
+              height="25"
+              fill="#8fb889"
+              opacity="0.8"
+            />
+            <rect
+              x="40"
+              y="10"
+              width="25"
+              height="25"
+              fill="#b8d3a7"
+              opacity="0.6"
+            />
+            <rect
+              x="70"
+              y="10"
+              width="25"
+              height="25"
+              fill="#8fb889"
+              opacity="0.9"
+            />
+            <rect
+              x="10"
+              y="40"
+              width="25"
+              height="25"
+              fill="#5a8c5a"
+              opacity="0.7"
+            />
+            <rect
+              x="40"
+              y="40"
+              width="25"
+              height="25"
+              fill="#2d4a2d"
+              opacity="0.8"
+            />
+            <rect
+              x="70"
+              y="40"
+              width="25"
+              height="25"
+              fill="#8fb889"
+              opacity="0.5"
+            />
+            <rect
+              x="10"
+              y="70"
+              width="25"
+              height="25"
+              fill="#b8d3a7"
+              opacity="0.6"
+            />
+            <rect
+              x="40"
+              y="70"
+              width="25"
+              height="25"
+              fill="#8fb889"
+              opacity="0.8"
+            />
+            <rect
+              x="70"
+              y="70"
+              width="25"
+              height="25"
+              fill="#5a8c5a"
+              opacity="0.7"
+            />
+          </svg>
+        </div>
+
+
+        <div class="fade-svg">
+          <svg
+            width="120"
+            height="120"
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="60"
+              cy="60"
+              r="45"
+              stroke="#8fb889"
+              stroke-width="2"
+              fill="none"
+              opacity="0.8"
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="30"
+              stroke="#b8d3a7"
+              stroke-width="2"
+              fill="none"
+              opacity="0.6"
+            />
+            <circle
+              cx="60"
+              cy="60"
+              r="15"
+              stroke="#5a8c5a"
+              stroke-width="2"
+              fill="none"
+              opacity="0.9"
+            />
+            <path d="M45 45 L75 75" stroke="#2d4a2d" stroke-width="3" />
+            <path d="M75 45 L45 75" stroke="#2d4a2d" stroke-width="3" />
+          </svg>
+        </div>-->
+      </div>
+
+      <div class="enter-prompt" id="enterPrompt">Press Enter to Begin</div>
+    </div>
+
+    <!-- Main Site -->
+    <div class="main-site" id="mainSite">
+      <header class="header">
+        <h1>Decay Project</h1>
+        <p>Exploring the Visual Patterns of Degradation</p>
+      </header>
+
+      <div class="content-section">
+        <div class="grid">
+          <!-- Dissolve Animation Card -->
+          <div class="media-card">
+            <div
+              id="dissolve-container"
+              style="
+                height: 250px;
+                width: 100%;
+                background: #000;
+                position: relative;
+                overflow: hidden;
+              "
+            >
+              <img
+                id="dissolve-frame"
+                style="width: 100%; height: 100%; object-fit: contain"
+                alt="Dissolve Animation"
+              />
+              <div
+                id="dissolve-overlay"
+                style="
+                  position: absolute;
+                  bottom: 10px;
+                  left: 10px;
+                  right: 10px;
+                  background: rgba(0, 0, 0, 0.7);
+                  color: white;
+                  padding: 5px 10px;
+                  border-radius: 5px;
+                  font-size: 0.9rem;
+                "
+              >
+                <div id="dissolve-info">Frame: 1 / 1381</div>
+                <div
+                  style="
+                    width: 100%;
+                    height: 4px;
+                    background: #333;
+                    border-radius: 2px;
+                    margin-top: 5px;
+                  "
+                >
+                  <div
+                    id="dissolve-progress"
+                    style="
+                      width: 0%;
+                      height: 100%;
+                      background: #8fb889;
+                      border-radius: 2px;
+                      transition: width 0.1s;
+                    "
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="media-card-content">
+              <h3>Dissolve Animation</h3>
+              <p>1,381 frame sequence showing the complete dissolve process.</p>
+              <div
+                style="
+                  margin-top: 1rem;
+                  display: flex;
+                  gap: 1rem;
+                  align-items: center;
+                "
+              >
+                <button
+                  class="btn"
+                  onclick="toggleDissolveAnimation()"
+                  id="dissolveToggle"
+                  style="margin: 0"
+                >
+                  Play
+                </button>
+                <label style="color: #8fb889">
+                  Speed:
+                  <input
+                    type="range"
+                    id="speedSlider"
+                    min="1"
+                    max="30"
+                    value="12"
+                    style="margin-left: 0.5rem"
+                    onchange="updateDissolveSpeed()"
+                  />
+                  <span id="speedDisplay">12 FPS</span>
+                </label>
+              </div>
+              <div
+                id="dissolveStatus"
+                style="margin-top: 0.5rem; color: #8fb889; font-size: 0.9rem"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Interactive 3D Model Card -->
+          <div class="media-card">
+            <div
+              id="threejs-container"
+              style="height: 250px; width: 100%; cursor: grab"
+            ></div>
+            <div class="media-card-content">
+              <h3>3D Decay Models</h3>
+              <p>
+                Interactive 3D visualization of decay rows. Click and drag to
+                rotate manually.
+              </p>
+              <div
+                style="
+                  margin-top: 1rem;
+                  display: flex;
+                  align-items: center;
+                  gap: 1rem;
+                  flex-wrap: wrap;
+                "
+              >
+                <select
+                  id="rowSelect"
+                  onchange="loadSelectedRow()"
+                  style="
+                    padding: 0.5rem;
+                    background: #333;
+                    color: white;
+                    border: 1px solid #555;
+                  "
+                >
+                  <option value="1">Row 1</option>
+                  <option value="2">Row 2</option>
+                  <option value="3">Row 3</option>
+                  <option value="4">Row 4</option>
+                  <option value="5">Row 5</option>
+                  <option value="6">Row 6</option>
+                  <option value="7">Row 7</option>
+                </select>
+                <label style="color: #8fb889">
+                  <input
+                    type="checkbox"
+                    id="autoRotate"
+                    checked
+                    onchange="toggleAutoRotate()"
+                    style="margin-right: 0.5rem"
+                  />
+                  Auto Rotate
+                </label>
+                <div style="display: flex; align-items: center; gap: 0.5rem">
+                  <button
+                    onclick="zoomIn()"
+                    style="
+                      padding: 0.3rem 0.8rem;
+                      background: #5a8c5a;
+                      color: white;
+                      border: none;
+                      border-radius: 3px;
+                      cursor: pointer;
+                    "
+                  >
+                    +
+                  </button>
+                  <span style="color: #8fb889; font-size: 0.9rem">Zoom</span>
+                  <button
+                    onclick="zoomOut()"
+                    style="
+                      padding: 0.3rem 0.8rem;
+                      background: #5a8c5a;
+                      color: white;
+                      border: none;
+                      border-radius: 3px;
+                      cursor: pointer;
+                    "
+                  >
+                    −
+                  </button>
+                  <button
+                    onclick="resetZoom()"
+                    style="
+                      padding: 0.3rem 0.8rem;
+                      background: #4a7a4a;
+                      color: white;
+                      border: none;
+                      border-radius: 3px;
+                      cursor: pointer;
+                    "
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div
+                id="loadingStatus"
+                style="margin-top: 0.5rem; color: #8fb889; font-size: 0.9rem"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Video Card -->
+          <div class="media-card">
+            <video controls poster="/api/placeholder/300/250">
+              <source src="#" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <div class="media-card-content">
+              <h3>Process Documentation</h3>
+              <p>
+                Time-lapse video showing the decay process across different
+                stages.
+              </p>
+            </div>
+          </div>
+
+          <!-- Image Card 1 -->
+          <div class="media-card">
+            <img src="/api/placeholder/300/250" alt="Decay Stage 1" />
+            <div class="media-card-content">
+              <h3>Initial State</h3>
+              <p>
+                The beginning stage of the decay process, showing original color
+                patterns.
+              </p>
+            </div>
+          </div>
+
+          <!-- Image Card 2 -->
+          <div class="media-card">
+            <img src="/api/placeholder/300/250" alt="Decay Stage 3" />
+            <div class="media-card-content">
+              <h3>Mid-Stage Transformation</h3>
+              <p>
+                Color shifts and pattern changes become visible as decay
+                progresses.
+              </p>
+            </div>
+          </div>
+
+          <!-- Image Card 3 -->
+          <div class="media-card">
+            <img src="/api/placeholder/300/250" alt="Decay Stage 6" />
+            <div class="media-card-content">
+              <h3>Final State</h3>
+              <p>
+                The complete transformation showing the final decay patterns.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center">
+          <button class="btn" onclick="openPDF()">View Project Leaflet</button>
+          <button class="btn" onclick="showDecayGrids()">
+            View Decay Grids
+          </button>
+        </div>
+
+        <div id="decayGridsContainer" style="display: none; margin-top: 2rem">
+          <h2 style="text-align: center; color: #b8d3a7; margin-bottom: 1rem">
+            Decay Grid Progression
+          </h2>
+          <div id="decayGrids"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PDF Modal -->
+    <div class="pdf-modal" id="pdfModal">
+      <div class="pdf-content">
+        <button class="close-btn" onclick="closePDF()">&times;</button>
+        <h2 style="color: #333; margin-bottom: 1rem">Project Leaflet</h2>
+        <p style="color: #666">
+          This leaflet contains detailed information about the Decay Project,
+          including methodology, findings, and visual analysis of the decay
+          progression through six distinct stages.
+        </p>
+        <div
+          style="
+            margin: 2rem 0;
+            padding: 2rem;
+            background: #f5f5f5;
+            border-radius: 5px;
+          "
+        >
+          <h3 style="color: #333">Key Findings:</h3>
+          <ul style="color: #666; margin-top: 1rem">
+            <li>Color progression from warm yellows to cool greens</li>
+            <li>Six distinct stages of decay identified</li>
+            <li>Consistent patterns across the 7x13 grid</li>
+            <li>Progressive darkening and green shift in final stages</li>
+          </ul>
+        </div>
+        <p style="color: #666; font-style: italic">
+          Note: In a real implementation, this would display an actual PDF
+          document.
+        </p>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <script>
+      // Three.js setup for 3D model display
+      let scene, camera, renderer, clock, model;
+      let currentRow = 1;
+      let isLoading = false;
+      let autoRotate = true;
+      let isManuallyRotating = false;
+      let initialCameraPosition = { x: 3, y: 3, z: 5 };
+      let zoomLevel = 1.0;
+      let minZoom = 0.1;
+      let maxZoom = 5.0;
+
+      function init3D() {
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a1a);
+
+        // Camera setup
+        camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+        camera.position.set(
+          initialCameraPosition.x,
+          initialCameraPosition.y,
+          initialCameraPosition.z
+        );
+        camera.lookAt(0, 0, 0);
+
+        // Renderer setup
+        const container = document.getElementById("threejs-container");
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.offsetWidth, container.offsetHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        container.appendChild(renderer.domElement);
+
+        // Enhanced lighting setup
+        setupLighting();
+
+        // Controls
+        addMouseControls();
+
+        // Clock for animation timing
+        clock = new THREE.Clock();
+
+        // Load the first row by default
+        loadOBJModel(1);
+
+        // Render loop
+        animate();
+      }
+
+      function setupLighting() {
+        // Remove all existing lights
+        scene.children = scene.children.filter((child) => !child.isLight);
+
+        // Ambient light for overall illumination
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+        scene.add(ambientLight);
+
+        // Main directional light (key light)
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        mainLight.position.set(5, 10, 5);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+        mainLight.shadow.camera.near = 0.5;
+        mainLight.shadow.camera.far = 20;
+        mainLight.shadow.camera.left = -5;
+        mainLight.shadow.camera.right = 5;
+        mainLight.shadow.camera.top = 5;
+        mainLight.shadow.camera.bottom = -5;
+        scene.add(mainLight);
+
+        // Fill light (from opposite side)
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-5, 5, -5);
+        scene.add(fillLight);
+
+        // Top light for better detail visibility
+        const topLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        topLight.position.set(0, 10, 0);
+        scene.add(topLight);
+
+        // Point light for additional detail
+        const pointLight = new THREE.PointLight(0xffffff, 0.3, 10);
+        pointLight.position.set(2, 2, 2);
+        scene.add(pointLight);
+      }
+
+      function updateLoadingStatus(message) {
+        const statusElement = document.getElementById("loadingStatus");
+        if (statusElement) {
+          statusElement.textContent = message;
+        }
+      }
+
+      function loadOBJModel(rowNumber) {
+        if (isLoading) return;
+
+        isLoading = true;
+        updateLoadingStatus(`Loading row ${rowNumber}...`);
+
+        // Check if MTLLoader is available
+        if (typeof THREE.MTLLoader !== "undefined") {
+          // Load with MTL materials
+          const mtlPath = `assets/blender/objects/row${rowNumber}.mtl`;
+          const objPath = `assets/blender/objects/row${rowNumber}.obj`;
+
+          const mtlLoader = new THREE.MTLLoader();
+          mtlLoader.load(
+            mtlPath,
+            function (materials) {
+              materials.preload();
+
+              // Load OBJ with materials
+              const objLoader = new THREE.OBJLoader();
+              objLoader.setMaterials(materials);
+              objLoader.load(
+                objPath,
+                function (object) {
+                  handleSuccessfulLoad(object, rowNumber, "with materials");
+                },
+                function (progress) {
+                  updateProgress(progress, rowNumber);
+                },
+                function (error) {
+                  console.error("Error loading OBJ:", error);
+                  updateLoadingStatus(
+                    `Error loading row ${rowNumber} OBJ file`
+                  );
+                  isLoading = false;
+                }
+              );
+            },
+            function (progress) {
+              updateLoadingStatus(`Loading materials for row ${rowNumber}...`);
+            },
+            function (error) {
+              // MTL failed, try OBJ only
+              console.warn(
+                "MTL file not found, loading OBJ without materials:",
+                error
+              );
+              loadOBJOnly(rowNumber);
+            }
+          );
+        } else {
+          // MTLLoader not available, load OBJ only
+          console.warn(
+            "MTLLoader not available, loading OBJ without materials"
+          );
+          loadOBJOnly(rowNumber);
+        }
+      }
+
+      function loadOBJOnly(rowNumber) {
+        updateLoadingStatus(`Loading row ${rowNumber} without materials...`);
+        const objPath = `assets/blender/objects/row${rowNumber}.obj`;
+
+        const objLoader = new THREE.OBJLoader();
+        objLoader.load(
+          objPath,
+          function (object) {
+            // Apply default material if no materials are present
+            object.traverse(function (child) {
+              if (child.isMesh && !child.material) {
+                child.material = new THREE.MeshLambertMaterial({
+                  color: 0xcccccc,
+                  side: THREE.DoubleSide,
+                });
+              }
+            });
+            handleSuccessfulLoad(object, rowNumber, "without materials");
+          },
+          function (progress) {
+            updateProgress(progress, rowNumber);
+          },
+          function (error) {
+            console.error("Error loading OBJ:", error);
+            updateLoadingStatus(`Error loading row ${rowNumber}`);
+            isLoading = false;
+            createFallbackObject(rowNumber);
+          }
+        );
+      }
+
+      function handleSuccessfulLoad(object, rowNumber, materialStatus) {
+        // Remove existing model
+        if (model) {
+          scene.remove(model);
+        }
+
+        // Add the new model
+        model = object;
+
+        // Enable shadows on all meshes
+        object.traverse(function (child) {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            // Ensure materials are properly configured
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach((mat) => {
+                  mat.needsUpdate = true;
+                  // Ensure double-sided rendering for complex models
+                  mat.side = THREE.DoubleSide;
+                });
+              } else {
+                child.material.needsUpdate = true;
+                child.material.side = THREE.DoubleSide;
+              }
+            }
+          }
+        });
+
+        // Scale and position the model
+        centerAndScaleModel(model);
+
+        scene.add(model);
+        currentRow = rowNumber;
+        isLoading = false;
+        updateLoadingStatus(`Row ${rowNumber} loaded ${materialStatus}`);
+
+        // Clear status after 3 seconds
+        setTimeout(() => updateLoadingStatus(""), 3000);
+      }
+
+      function updateProgress(progress, rowNumber) {
+        if (progress.total > 0) {
+          const percentComplete = (
+            (progress.loaded / progress.total) *
+            100
+          ).toFixed(0);
+          updateLoadingStatus(
+            `Loading row ${rowNumber}... ${percentComplete}%`
+          );
+        }
+      }
+
+      function centerAndScaleModel(object) {
+        // Calculate bounding box
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+
+        // Center the object
+        object.position.sub(center);
+
+        // Scale to fit in view (max dimension = 3 units)
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0) {
+          const scale = 3 / maxDim;
+          object.scale.setScalar(scale);
+        }
+      }
+
+      function createFallbackObject(rowNumber) {
+        // Create a fallback cube if both OBJ and MTL loading fails
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        const material = new THREE.MeshLambertMaterial({ color: 0x808080 });
+
+        if (model) {
+          scene.remove(model);
+        }
+
+        model = new THREE.Mesh(geometry, material);
+        model.castShadow = true;
+        model.receiveShadow = true;
+        scene.add(model);
+
+        updateLoadingStatus(`Using fallback for row ${rowNumber}`);
+      }
+
+      function loadSelectedRow() {
+        const select = document.getElementById("rowSelect");
+        const selectedRow = parseInt(select.value);
+        loadOBJModel(selectedRow);
+      }
+
+      function toggleAutoRotate() {
+        const checkbox = document.getElementById("autoRotate");
+        autoRotate = checkbox.checked;
+      }
+
+      function zoomIn() {
+        zoomLevel = Math.min(zoomLevel + 0.2, maxZoom);
+        updateCameraZoom();
+      }
+
+      function zoomOut() {
+        zoomLevel = Math.max(zoomLevel - 0.2, minZoom);
+        updateCameraZoom();
+      }
+
+      function resetZoom() {
+        zoomLevel = 1.0;
+        updateCameraZoom();
+      }
+
+      function updateCameraZoom() {
+        if (camera) {
+          const distance =
+            Math.sqrt(
+              initialCameraPosition.x * initialCameraPosition.x +
+                initialCameraPosition.y * initialCameraPosition.y +
+                initialCameraPosition.z * initialCameraPosition.z
+            ) / zoomLevel;
+
+          const direction = new THREE.Vector3(
+            initialCameraPosition.x,
+            initialCameraPosition.y,
+            initialCameraPosition.z
+          ).normalize();
+
+          camera.position.copy(direction.multiplyScalar(distance));
+          camera.lookAt(0, 0, 0);
+        }
+      }
+
+      function addMouseControls() {
+        const container = document.getElementById("threejs-container");
+        let isMouseDown = false;
+        let mouseX = 0,
+          mouseY = 0;
+
+        container.addEventListener("mousedown", (event) => {
+          if (isLoading) return;
+          isMouseDown = true;
+          isManuallyRotating = true;
+          mouseX = event.clientX;
+          mouseY = event.clientY;
+          container.style.cursor = "grabbing";
+        });
+
+        container.addEventListener("mousemove", (event) => {
+          if (!isMouseDown || isLoading) return;
+
+          const deltaX = event.clientX - mouseX;
+          const deltaY = event.clientY - mouseY;
+
+          if (model) {
+            model.rotation.y += deltaX * 0.01;
+            model.rotation.x += deltaY * 0.01;
+          }
+
+          mouseX = event.clientX;
+          mouseY = event.clientY;
+        });
+
+        container.addEventListener("mouseup", () => {
+          isMouseDown = false;
+          container.style.cursor = "grab";
+          // Allow auto-rotation to resume after 2 seconds of no manual input
+          setTimeout(() => {
+            isManuallyRotating = false;
+          }, 2000);
+        });
+
+        container.addEventListener("mouseleave", () => {
+          isMouseDown = false;
+          container.style.cursor = "grab";
+          setTimeout(() => {
+            isManuallyRotating = false;
+          }, 1000);
+        });
+
+        // Mouse wheel zoom
+        container.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          const zoomSpeed = 0.1;
+
+          if (event.deltaY > 0) {
+            // Zoom out
+            zoomLevel = Math.max(zoomLevel - zoomSpeed, minZoom);
+          } else {
+            // Zoom in
+            zoomLevel = Math.min(zoomLevel + zoomSpeed, maxZoom);
+          }
+
+          updateCameraZoom();
+        });
+
+        // Handle window resize
+        window.addEventListener("resize", () => {
+          const container = document.getElementById("threejs-container");
+          if (container && renderer && camera) {
+            camera.aspect = container.offsetWidth / container.offsetHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.offsetWidth, container.offsetHeight);
+          }
+        });
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        // Auto-rotation when not manually rotating
+        if (autoRotate && !isManuallyRotating && model) {
+          model.rotation.y += 0.005; // Slow, smooth rotation
+        }
+
+        if (renderer && scene && camera) {
+          renderer.render(scene, camera);
+        }
+      }
+
+      // Dissolve Animation Variables
+      let dissolveAnimationId;
+      let currentDissolveFrame = 10000;
+      const minFrame = 10000;
+      const maxFrame = 11381;
+      const totalFrames = maxFrame - minFrame + 1;
+      let isDissolveAnimating = false;
+      let dissolveFrameRate = 12; // FPS
+
+      function initializeDissolveAnimation() {
+        // Load the first frame
+        loadDissolveFrame(currentDissolveFrame);
+        updateDissolveInfo();
+      }
+
+      function loadDissolveFrame(frameNumber) {
+        const img = document.getElementById("dissolve-frame");
+        const frameStr = frameNumber.toString().padStart(5, "0");
+        const imagePath = `assets/blender/animation/rerender/DISSOLVE0001_${frameStr}.png`;
+
+        // Preload the image to avoid flicker
+        const newImg = new Image();
+        newImg.onload = function () {
+          img.src = this.src;
+          updateDissolveInfo();
+        };
+        newImg.onerror = function () {
+          updateDissolveStatus(`Error loading frame ${frameNumber}`);
+        };
+        newImg.src = imagePath;
+      }
+
+      function updateDissolveInfo() {
+        const frameIndex = currentDissolveFrame - minFrame + 1;
+        const progress =
+          ((currentDissolveFrame - minFrame) / (totalFrames - 1)) * 100;
+
+        document.getElementById(
+          "dissolve-info"
+        ).textContent = `Frame: ${frameIndex} / ${totalFrames}`;
+        document.getElementById(
+          "dissolve-progress"
+        ).style.width = `${progress}%`;
+      }
+
+      function updateDissolveStatus(message) {
+        const statusElement = document.getElementById("dissolveStatus");
+        if (statusElement) {
+          statusElement.textContent = message;
+          setTimeout(() => (statusElement.textContent = ""), 3000);
+        }
+      }
+
+      function toggleDissolveAnimation() {
+        isDissolveAnimating = !isDissolveAnimating;
+        const button = document.getElementById("dissolveToggle");
+
+        if (isDissolveAnimating) {
+          button.textContent = "Pause";
+          startDissolveAnimation();
+          updateDissolveStatus("Playing dissolve animation...");
+        } else {
+          button.textContent = "Play";
+          stopDissolveAnimation();
+          updateDissolveStatus("Animation paused");
+        }
+      }
+
+      function startDissolveAnimation() {
+        const frameDelay = 1000 / dissolveFrameRate;
+
+        function nextFrame() {
+          if (!isDissolveAnimating) return;
+
+          currentDissolveFrame++;
+          if (currentDissolveFrame > maxFrame) {
+            currentDissolveFrame = minFrame; // Loop back to start
+          }
+
+          loadDissolveFrame(currentDissolveFrame);
+          dissolveAnimationId = setTimeout(nextFrame, frameDelay);
+        }
+
+        nextFrame();
+      }
+
+      function stopDissolveAnimation() {
+        if (dissolveAnimationId) {
+          clearTimeout(dissolveAnimationId);
+          dissolveAnimationId = null;
+        }
+      }
+
+      function updateDissolveSpeed() {
+        const slider = document.getElementById("speedSlider");
+        const display = document.getElementById("speedDisplay");
+        dissolveFrameRate = parseInt(slider.value);
+        display.textContent = `${dissolveFrameRate} FPS`;
+
+        // If animation is playing, restart with new speed
+        if (isDissolveAnimating) {
+          stopDissolveAnimation();
+          startDissolveAnimation();
+        }
+      }
+
+      // Initialize dissolve animation when entering main site
+      function initializeWhenReady() {
+        if (document.getElementById("mainSite").style.display !== "none") {
+          init3D();
+          initializeDissolveAnimation();
+        }
+      }
+
+      // Load decay grid data
+      // Load decay grid data
+      const decayData = {
+        stages: [
+          {
+            stage: 1,
+            description: "Initial state (least decayed)",
+            grid: [
+              [
+                "#cbc6a1",
+                "#cbc994",
+                "#d3d09d",
+                "#d0cd96",
+                "#c9c78b",
+                "#bdb57a",
+                "#cbbf9f",
+                "#d0c683",
+                "#e1dca3",
+                "#e1dba0",
+                "#dfd89c",
+                "#e6dfa3",
+                "#ebe1a2",
+              ],
+              [
+                "#8d9368",
+                "#868f6d",
+                "#a0a87d",
+                "#858b65",
+                "#8f966a",
+                "#adb47d",
+                "#a79d64",
+                "#bcba80",
+                "#d3d39b",
+                "#c2c28a",
+                "#8e9169",
+                "#a1a16f",
+                "#e5dda0",
+              ],
+              [
+                "#6a7153",
+                "#181c19",
+                "#292e26",
+                "#171b19",
+                "#202520",
+                "#20241e",
+                "#2f2a19",
+                "#24271d",
+                "#5f654a",
+                "#555b41",
+                "#50573f",
+                "#727451",
+                "#e6dfa1",
+              ],
+              [
+                "#707758",
+                "#767e65",
+                "#2a3028",
+                "#293027",
+                "#282e26",
+                "#0c0e0f",
+                "#12120e",
+                "#2b2e22",
+                "#63694f",
+                "#505641",
+                "#414733",
+                "#9b9c6e",
+                "#ebe2a5",
+              ],
+              [
+                "#b3b586",
+                "#a5aa82",
+                "#7e8363",
+                "#676b4e",
+                "#53573f",
+                "#2d3126",
+                "#68633d",
+                "#75744d",
+                "#9c9f76",
+                "#8b8e69",
+                "#999b6d",
+                "#d9d49b",
+                "#f2e9b2",
+              ],
+              [
+                "#f3edb6",
+                "#f5f3c2",
+                "#f3efbc",
+                "#e1dca3",
+                "#c5c284",
+                "#bab87f",
+                "#bca964",
+                "#ddd390",
+                "#ece5ab",
+                "#f0e9b1",
+                "#f0e9b0",
+                "#e1d898",
+                "#ede5ac",
+              ],
+              [
+                "#e7db9c",
+                "#ede2a4",
+                "#f2e6a8",
+                "#edde9e",
+                "#e1d18c",
+                "#ded087",
+                "#c2a966",
+                "#ddcc8e",
+                "#dfce9c",
+                "#e4d5a7",
+                "#e3d4a3",
+                "#e1d3a4",
+                "#ded19e",
+              ],
+            ],
+          },
+          {
+            stage: 6,
+            description: "Final decay state (most decayed)",
+            grid: [
+              [
+                "#7ab2ad",
+                "#67a39b",
+                "#639a91",
+                "#5e968d",
+                "#4d877d",
+                "#68958d",
+                "#799f96",
+                "#538679",
+                "#4e8070",
+                "#5b887b",
+                "#5a8c7b",
+                "#548b76",
+                "#90b1a6",
+              ],
+              [
+                "#619896",
+                "#5a9b92",
+                "#4a887f",
+                "#4c8b80",
+                "#4b867a",
+                "#487f71",
+                "#517f74",
+                "#4a7a6b",
+                "#497a6a",
+                "#457867",
+                "#4d826f",
+                "#55907c",
+                "#5d937e",
+              ],
+              [
+                "#4a7e80",
+                "#4e8a85",
+                "#4c8a7f",
+                "#4a847a",
+                "#42736d",
+                "#46726c",
+                "#406c5f",
+                "#437364",
+                "#457563",
+                "#447665",
+                "#4c8172",
+                "#5c9584",
+                "#6c9e8a",
+              ],
+              [
+                "#4e8381",
+                "#539084",
+                "#4d887b",
+                "#498377",
+                "#44736e",
+                "#48756f",
+                "#527c6e",
+                "#447463",
+                "#467762",
+                "#4a7466",
+                "#56887b",
+                "#6aa08f",
+                "#76a18a",
+              ],
+              [
+                "#57908a",
+                "#538f82",
+                "#488072",
+                "#477e71",
+                "#447971",
+                "#54846f",
+                "#61897b",
+                "#477865",
+                "#467463",
+                "#567f6e",
+                "#598276",
+                "#699c8d",
+                "#7aa08d",
+              ],
+              [
+                "#5d9c92",
+                "#599688",
+                "#4f8779",
+                "#4a7f72",
+                "#518a7c",
+                "#588e79",
+                "#618879",
+                "#568972",
+                "#528570",
+                "#5f907c",
+                "#5e8f7c",
+                "#6b9385",
+                "#63907d",
+              ],
+              [
+                "#70aea4",
+                "#5e9b92",
+                "#538b81",
+                "#508379",
+                "#55897d",
+                "#5a907f",
+                "#73998a",
+                "#74a388",
+                "#719b82",
+                "#76a28b",
+                "#719b85",
+                "#669582",
+                "#759e85",
+              ],
+            ],
+          },
+        ],
+      };
+
+      // Handle Enter key press on start page
+      document.addEventListener("keydown", function (event) {
+        if (
+          event.key === "Enter" &&
+          document.getElementById("startPage").style.display !== "none"
+        ) {
+          document.getElementById("startPage").style.display = "none";
+          document.getElementById("mainSite").style.display = "block";
+          // Initialize 3D scene and dissolve animation after entering main site
+          setTimeout(() => {
+            init3D();
+            initializeDissolveAnimation();
+          }, 100);
+        }
+      });
+
+      // Click to enter as alternative
+      document
+        .getElementById("startPage")
+        .addEventListener("click", function () {
+          this.style.display = "none";
+          document.getElementById("mainSite").style.display = "block";
+          // Initialize 3D scene and dissolve animation after entering main site
+          setTimeout(() => {
+            init3D();
+            initializeDissolveAnimation();
+          }, 100);
+        });
+
+      // PDF Modal functions
+      function openPDF() {
+        document.getElementById("pdfModal").style.display = "flex";
+      }
+
+      function closePDF() {
+        document.getElementById("pdfModal").style.display = "none";
+      }
+
+      // Show decay grids
+      function showDecayGrids() {
+        const container = document.getElementById("decayGridsContainer");
+        const gridsDiv = document.getElementById("decayGrids");
+
+        if (container.style.display === "none") {
+          container.style.display = "block";
+
+          gridsDiv.innerHTML = "";
+
+          decayData.stages.forEach((stage) => {
+            const stageDiv = document.createElement("div");
+            stageDiv.className = "decay-grid";
+            stageDiv.innerHTML =
+              '<h3 style="color: #b8d3a7; text-align: center; margin-bottom: 1rem;">Stage ' +
+              stage.stage +
+              ": " +
+              stage.description +
+              "</h3>";
+
+            const gridDiv = document.createElement("div");
+            stage.grid.forEach((row) => {
+              const rowDiv = document.createElement("div");
+              rowDiv.className = "grid-row";
+              row.forEach((color) => {
+                const cellDiv = document.createElement("div");
+                cellDiv.className = "grid-cell";
+                cellDiv.style.backgroundColor = color;
+                rowDiv.appendChild(cellDiv);
+              });
+              gridDiv.appendChild(rowDiv);
+            });
+
+            stageDiv.appendChild(gridDiv);
+            gridsDiv.appendChild(stageDiv);
+          });
+        } else {
+          container.style.display = "none";
+        }
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        const modal = document.getElementById("pdfModal");
+        if (event.target === modal) {
+          modal.style.display = "none";
+        }
+      };
+    </script>
+  </body>
+</html>
