@@ -21,11 +21,11 @@
           <img src="assets/svgs/3d-block.svg" alt="3D Block" />
         </div>
         <div class="draggable" id="gridSvg" draggable="true">
-          <div class="tooltip">Grid Analysis & Leaflet</div>
+          <div class="tooltip">Leaflet</div>
           <img src="assets/svgs/grid.svg" alt="Grid" />
         </div>
         <div class="draggable" id="timerSvg" draggable="true">
-          <div class="tooltip">Animation & Video Player</div>
+          <div class="tooltip">Animation</div>
           <img src="assets/svgs/timer.svg" alt="Timer" />
         </div>
       </div>
@@ -36,13 +36,13 @@
     <div class="drop-zone" id="deleteZone"></div>
 
     <img
-      src="assets/svgs/save.png"
+      src="assets/svgs/save.svg"
       alt="Save"
       class="action-icon"
       id="saveIcon"
     />
     <img
-      src="assets/svgs/delete.png"
+      src="assets/svgs/delete.svg"
       alt="Delete"
       class="action-icon"
       id="deleteIcon"
@@ -82,13 +82,8 @@
 
     <div class="screen" id="timerScreen">
       <button class="back-button" id="timerBackButton">←</button>
-      <video
-        controls
-        width="80%"
-        height="auto"
-        poster="/api/placeholder/800/450"
-      >
-        <source src="#" type="video/mp4" />
+      <video controls width="80%" height="auto">
+        <source src="assets/final-outcome.mp4" type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>
