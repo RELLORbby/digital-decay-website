@@ -1,0 +1,276 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Arial", sans-serif;
+  background: #ffffff;
+  color: #333333;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+
+.svg-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  width: 50vw; /* Container matches the width of decay SVG exactly */
+}
+
+.row {
+  gap: 10px;
+  width: 100%;
+  height: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.draggable {
+  cursor: grab;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+/* Decay SVG specific styling */
+#decaySvg {
+  width: 100%; /* Takes full width of container (which is 50vw) */
+  height: auto;
+  display: flex;
+  justify-content: center;
+}
+
+#decaySvg img {
+  width: 100%;
+  height: auto;
+}
+
+/* Bottom row SVGs styling - equal height and width */
+.row .draggable {
+  flex: 1;
+  height: 13vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.row .draggable img {
+  height: 100%; /* Force same height for all images */
+  width: auto; /* Let width adjust to maintain aspect ratio */
+  object-fit: contain;
+}
+
+.draggable:hover {
+  transform: scale(1.05);
+}
+
+.draggable:active {
+  cursor: grabbing;
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 14px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.8) transparent transparent;
+}
+
+.draggable:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.action-icon {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+}
+
+#saveIcon {
+  bottom: 30px;
+  left: 30px;
+}
+
+#deleteIcon {
+  bottom: 30px;
+  right: 30px;
+}
+
+/* INCREASED SIZE OF DROP ZONES FROM 150px to 250px and made them extend off-screen */
+.drop-zone {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  /* Made drop zones almost invisible during normal state */
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+#saveZone {
+  bottom: -100px; /* Extend off screen */
+  left: -100px; /* Extend off screen */
+}
+
+#deleteZone {
+  bottom: -100px; /* Extend off screen */
+  right: -100px; /* Extend off screen */
+}
+
+/* Changed highlight color to match the fresh green from first decay stage */
+.highlight {
+  background-color: rgba(
+    184,
+    211,
+    167,
+    0.25
+  ); /* Using #b8d3a7 with transparency */
+  transform: scale(1.1); /* Reduced from 1.2 to 1.1 to be more subtle */
+}
+
+/* Changed delete highlight color to match the final decay stage color */
+.delete-highlight {
+  background-color: rgba(
+    90,
+    140,
+    123,
+    0.25
+  ); /* Using #5a8c7b with transparency */
+  transform: scale(1.1); /* Reduced from 1.2 to 1.1 to be more subtle */
+}
+
+/* Back Button */
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  padding: 10px 20px;
+  background: #5a8c5a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.back-button:hover {
+  background: #4a7a4a;
+}
+
+/* Screens */
+.screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: white;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+#modelScreen {
+  flex-direction: column;
+  background-color: #000000; /* Make the screen background black */
+}
+
+#modelScreen h2 {
+  color: #ffffff; /* Change title text to white for better contrast */
+  margin-bottom: 20px;
+}
+
+.model-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.model-item {
+  width: 280px; /* Increased from 200px to 280px */
+  height: 250px; /* Increased from 200px to 280px */
+  background: #000000; /* Changed from light gray to black */
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  margin: 15px;
+  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.1); /* Made the shadow lighter for dark bg */
+  border: 1px solid #333333; /* Added a subtle border */
+}
+
+/* Animation for SVG disappearing */
+@keyframes disappear {
+  to {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.disappearing {
+  animation: disappear 0.5s forwards;
+}
+
+.appearing {
+  animation: appear 0.5s forwards;
+}
+
+.model-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ffffff; /* Changed to white text for black background */
+  font-size: 14px;
+  text-align: center;
+  background-color: rgba(50, 50, 50, 0.8); /* Darker background */
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 5;
+}
