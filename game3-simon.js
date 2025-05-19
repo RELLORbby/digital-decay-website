@@ -1,8 +1,12 @@
-// Game 3: Simon Says - Rewritten to match Python version
+// Game 3: Simon Says - With improved image transitions
 let simonGame = null;
 let simonAnimationFrame = null;
+let preloadedImages = {}; // Cache for preloaded images
 
 function initializeSimonGame() {
+  // Preload a range of animation frames immediately
+  preloadAnimationFrames();
+
   simonGame = {
     // Game states
     SHOWING_SEQUENCE: 0,
@@ -32,6 +36,11 @@ function initializeSimonGame() {
     targetFrame: 10000, // Target frame to animate towards
     animationSpeed: 300, // Speed of frame transition (lower = faster)
     lastFrameTime: 0, // Last time the frame was updated,
+
+    // For smooth transitions
+    previousImage: null,
+    currentImage: null,
+    transitionProgress: 1, // 0 to 1, where 1 means fully showing currentImage
 
     // Instructions
     correctPrefix: "Computer says press",
@@ -106,7 +115,6 @@ function initializeSimonGame() {
   const backButton = document.querySelector("#game3 .back-button");
   if (backButton) {
     // Use multiple approaches to ensure it works
-    // backButton.removeEventListener("click", handleBackButton);
     backButton.removeEventListener("click", goToMain);
 
     backButton.addEventListener("click", function (e) {
@@ -135,9 +143,102 @@ function initializeSimonGame() {
   simonGame.currentFrame = simonGame.targetFrame;
   simonGame.lastFrameTime = Date.now();
 
+  // Initialize animation container with double-buffering
+  const animationDiv = document.getElementById("simonAnimation");
+  if (animationDiv) {
+    // Clear existing content
+    animationDiv.innerHTML = "";
+
+    // Create two img elements for cross-fading
+    const img1 = document.createElement("img");
+    img1.style.position = "absolute";
+    img1.style.top = "0";
+    img1.style.left = "0";
+    img1.style.width = "100%";
+    img1.style.height = "100%";
+    img1.style.opacity = "1";
+    img1.style.transition = "opacity 0.2s ease-in-out";
+
+    const img2 = document.createElement("img");
+    img2.style.position = "absolute";
+    img2.style.top = "0";
+    img2.style.left = "0";
+    img2.style.width = "100%";
+    img2.style.height = "100%";
+    img2.style.opacity = "0";
+    img2.style.transition = "opacity 0.2s ease-in-out";
+
+    animationDiv.appendChild(img1);
+    animationDiv.appendChild(img2);
+
+    // Set the initial frame
+    const initialFrame = getFramePath(simonGame.currentFrame);
+
+    // Preload and set the initial image
+    preloadImage(initialFrame, () => {
+      img1.src = initialFrame;
+      simonGame.currentImage = img1;
+      simonGame.previousImage = img2;
+    });
+  }
+
   // Start new level
   startNewLevel();
   updateSimonAnimation();
+}
+
+// Preload animation frames to reduce flashing
+function preloadAnimationFrames() {
+  // First preload key frames (every 100 frames) for faster initial loading
+  const keyFrames = [];
+  for (let frame = 10000; frame <= 11381; frame += 100) {
+    keyFrames.push(frame);
+  }
+  // Add the end frame if it's not already included
+  if (!keyFrames.includes(11381)) {
+    keyFrames.push(11381);
+  }
+
+  console.log("Preloading key frames:", keyFrames);
+
+  // Preload key frames first
+  keyFrames.forEach((frame) => {
+    const path = getFramePath(frame);
+    preloadImage(path);
+  });
+
+  // Then start loading all frames in the background
+  setTimeout(() => {
+    for (let frame = 10000; frame <= 11381; frame += 20) {
+      // Load every 20th frame to save memory
+      if (!keyFrames.includes(frame)) {
+        const path = getFramePath(frame);
+        preloadImage(path);
+      }
+    }
+  }, 1000); // Delay to allow key frames to load first
+}
+
+// Helper function to get frame path
+function getFramePath(frameNum) {
+  frameNum = Math.min(11381, Math.max(10000, Math.floor(frameNum)));
+  return `assets/blender/animation/rerender/DISSOLVE0001_${frameNum}.png`;
+}
+
+// Preload image and store in cache
+function preloadImage(src, callback) {
+  if (preloadedImages[src]) {
+    if (callback) callback();
+    return preloadedImages[src];
+  }
+
+  const img = new Image();
+  img.onload = function () {
+    preloadedImages[src] = img;
+    if (callback) callback();
+  };
+  img.src = src;
+  return img;
 }
 
 function startNewLevel(isReset = false) {
@@ -389,16 +490,10 @@ function updateSimonAnimation() {
       11381,
       Math.max(10000, Math.floor(simonGame.currentFrame))
     );
-    const imagePath = `assets/blender/animation/rerender/DISSOLVE0001_${frameNum}.png`;
+    const imagePath = getFramePath(frameNum);
 
-    // Update the animation display
-    const animationDiv = document.getElementById("simonAnimation");
-    if (animationDiv) {
-      animationDiv.style.backgroundImage = `url(${imagePath})`;
-      animationDiv.style.backgroundSize = "contain";
-      animationDiv.style.backgroundRepeat = "no-repeat";
-      animationDiv.style.backgroundPosition = "center";
-    }
+    // Update the animation display with cross-fade
+    updateAnimationWithCrossFade(imagePath);
 
     // Adjust animation speed based on decay level change rate
     const decayChangeRate = Math.abs(
@@ -414,6 +509,50 @@ function updateSimonAnimation() {
     } else {
       simonGame.animationSpeed = 300; // Normal speed
     }
+  }
+}
+
+// Function to update animation with cross-fade between images
+function updateAnimationWithCrossFade(newImagePath) {
+  if (!simonGame.currentImage || !simonGame.previousImage) {
+    const animationDiv = document.getElementById("simonAnimation");
+    if (animationDiv && animationDiv.children.length >= 2) {
+      simonGame.currentImage = animationDiv.children[0];
+      simonGame.previousImage = animationDiv.children[1];
+    } else {
+      return; // Animation elements not available
+    }
+  }
+
+  // If it's the same image, no need to update
+  if (simonGame.currentImage.src === newImagePath) {
+    return;
+  }
+
+  // Swap current and previous images
+  const temp = simonGame.currentImage;
+  simonGame.currentImage = simonGame.previousImage;
+  simonGame.previousImage = temp;
+
+  // Check if the image is already preloaded
+  const preloadImg = preloadedImages[newImagePath];
+
+  // Function to perform the actual swap
+  const performSwap = () => {
+    // Set the new image source
+    simonGame.currentImage.src = newImagePath;
+
+    // Show current image and hide previous image
+    simonGame.currentImage.style.opacity = "1";
+    simonGame.previousImage.style.opacity = "0";
+  };
+
+  if (preloadImg) {
+    // Image already cached, perform swap immediately
+    performSwap();
+  } else {
+    // Preload the image first, then perform swap
+    preloadImage(newImagePath, performSwap);
   }
 }
 
@@ -660,6 +799,10 @@ function handleKeyPress(keyCode, key) {
 // Cleanup function for when leaving Simon Says
 function cleanupSimonGame() {
   console.log("Cleaning up Simon Says game");
+
+  // Clear preloaded images cache to free memory
+  preloadedImages = {};
+
   if (simonAnimationFrame) {
     cancelAnimationFrame(simonAnimationFrame);
     simonAnimationFrame = null;
