@@ -58,25 +58,23 @@
 
     <div class="screen" id="gridScreen">
       <button class="back-button" id="gridBackButton">←</button>
-      <div
-        id="leafletContent"
-        style="
-          width: 80%;
-          height: 80%;
-          padding: 20px;
-          background: #f5f5f5;
-          border-radius: 10px;
-          overflow: auto;
-        "
-      >
-        <h2>Project Leaflet</h2>
-        <p>
-          This leaflet contains detailed information about the Decay Project,
-          including methodology, findings, and visual analysis of the decay
-          progression through six distinct stages.
-        </p>
-
-        <div id="decayGrids" style="margin-top: 20px"></div>
+      <div id="leafletContent">
+        <!-- Document viewer -->
+        <div id="document-container">
+          <div id="manual-viewer">
+            <img
+              src="assets/manual.png"
+              alt="Manual Document"
+              id="document-image"
+            />
+          </div>
+        </div>
+        <div class="controls">
+          <button class="control-btn" id="zoom-in">+</button>
+          <div class="zoom-level" id="zoom-level">100%</div>
+          <button class="control-btn" id="zoom-out">-</button>
+          <button class="control-btn" id="reset-view">Reset</button>
+        </div>
       </div>
     </div>
 

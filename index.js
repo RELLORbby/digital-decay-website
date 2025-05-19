@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupBackButtons();
 
   // Initialize grid leaflet content
-  initializeGridLeaflet();
+  setupDocumentViewer();
 
   // Initialize 3D models display
   initialize3DModels();
@@ -172,89 +172,185 @@ function goBack() {
   });
 }
 
-function initializeGridLeaflet() {
-  const decayData = {
-    stages: [
-      {
-        stage: 1,
-        description: "Initial state (least decayed)",
-        grid: [
-          [
-            "#cbc6a1",
-            "#cbc994",
-            "#d3d09d",
-            "#d0cd96",
-            "#c9c78b",
-            "#bdb57a",
-            "#cbbf9f",
-            "#d0c683",
-            "#e1dca3",
-            "#e1dba0",
-            "#dfd89c",
-            "#e6dfa3",
-            "#ebe1a2",
-          ],
-          // Rest of the grid data...
-          // Truncated for brevity
-        ],
-      },
-      {
-        stage: 6,
-        description: "Final decay state (most decayed)",
-        grid: [
-          [
-            "#7ab2ad",
-            "#67a39b",
-            "#639a91",
-            "#5e968d",
-            "#4d877d",
-            "#68958d",
-            "#799f96",
-            "#538679",
-            "#4e8070",
-            "#5b887b",
-            "#5a8c7b",
-            "#548b76",
-            "#90b1a6",
-          ],
-          // Rest of the grid data...
-          // Truncated for brevity
-        ],
-      },
-    ],
-  };
+function setupDocumentViewer() {
+  const manualViewer = document.getElementById("manual-viewer");
+  const zoomInBtn = document.getElementById("zoom-in");
+  const zoomOutBtn = document.getElementById("zoom-out");
+  const resetViewBtn = document.getElementById("reset-view");
+  const zoomLevelDisplay = document.getElementById("zoom-level");
 
-  const gridsDiv = document.getElementById("decayGrids");
+  // Skip if any element doesn't exist
+  if (
+    !manualViewer ||
+    !zoomInBtn ||
+    !zoomOutBtn ||
+    !resetViewBtn ||
+    !zoomLevelDisplay
+  ) {
+    console.error("Document viewer elements not found");
+    return;
+  }
 
-  decayData.stages.forEach((stage) => {
-    const stageDiv = document.createElement("div");
-    stageDiv.className = "decay-grid";
-    stageDiv.innerHTML = `<h3 style="margin-top: 20px; margin-bottom: 10px;">Stage ${stage.stage}: ${stage.description}</h3>`;
+  let scale = 1;
+  let isDragging = false;
+  let startX, startY;
+  let translateX = 0;
+  let translateY = 0;
 
-    const gridDiv = document.createElement("div");
-    stage.grid.forEach((row) => {
-      const rowDiv = document.createElement("div");
-      rowDiv.className = "grid-row";
-      rowDiv.style.display = "block";
-      rowDiv.style.height = "32px";
+  // Adjust initial scale based on document aspect ratio vs viewport
+  const img = document.getElementById("document-image");
+  if (img) {
+    img.onload = function () {
+      const container = document.getElementById("leafletContent");
+      if (container) {
+        const containerWidth = container.clientWidth * 0.9;
+        const containerHeight = container.clientHeight * 0.8;
 
-      row.forEach((color) => {
-        const cellDiv = document.createElement("div");
-        cellDiv.className = "grid-cell";
-        cellDiv.style.width = "30px";
-        cellDiv.style.height = "30px";
-        cellDiv.style.display = "inline-block";
-        cellDiv.style.margin = "1px";
-        cellDiv.style.backgroundColor = color;
-        rowDiv.appendChild(cellDiv);
-      });
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const containerAspect = containerWidth / containerHeight;
 
-      gridDiv.appendChild(rowDiv);
-    });
+        if (imgAspect > containerAspect) {
+          // Image is wider than container (relative to height)
+          scale = (containerWidth / img.naturalWidth) * 0.9;
+        } else {
+          // Image is taller than container (relative to width)
+          scale = (containerHeight / img.naturalHeight) * 0.9;
+        }
 
-    stageDiv.appendChild(gridDiv);
-    gridsDiv.appendChild(stageDiv);
+        // Apply initial transform
+        updateTransform();
+      }
+    };
+  }
+
+  // Apply transform
+  function updateTransform() {
+    manualViewer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    zoomLevelDisplay.textContent = `${Math.round(scale * 100)}%`;
+  }
+
+  // Zoom in button
+  zoomInBtn.addEventListener("click", function () {
+    if (scale < 3) {
+      scale += 0.1;
+      updateTransform();
+    }
   });
+
+  // Zoom out button
+  zoomOutBtn.addEventListener("click", function () {
+    if (scale > 0.5) {
+      scale -= 0.1;
+      updateTransform();
+    }
+  });
+
+  // Reset view button
+  resetViewBtn.addEventListener("click", function () {
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    updateTransform();
+  });
+
+  // Mouse wheel zoom
+  document.getElementById("leafletContent").addEventListener(
+    "wheel",
+    function (e) {
+      e.preventDefault();
+
+      if (e.deltaY < 0 && scale < 3) {
+        // Zoom in
+        scale += 0.1;
+      } else if (e.deltaY > 0 && scale > 0.5) {
+        // Zoom out
+        scale -= 0.1;
+      }
+
+      updateTransform();
+    },
+    { passive: false }
+  );
+
+  // Mouse drag functionality
+  manualViewer.addEventListener("mousedown", function (e) {
+    isDragging = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    manualViewer.style.cursor = "grabbing";
+  });
+
+  document.addEventListener("mousemove", function (e) {
+    if (isDragging) {
+      translateX = e.clientX - startX;
+      translateY = e.clientY - startY;
+      updateTransform();
+    }
+  });
+
+  document.addEventListener("mouseup", function () {
+    if (isDragging) {
+      isDragging = false;
+      manualViewer.style.cursor = "grab";
+    }
+  });
+
+  // Touch events for mobile
+  manualViewer.addEventListener("touchstart", function (e) {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - translateX;
+      startY = e.touches[0].clientY - translateY;
+    }
+  });
+
+  document.addEventListener("touchmove", function (e) {
+    if (isDragging && e.touches.length === 1) {
+      translateX = e.touches[0].clientX - startX;
+      translateY = e.touches[0].clientY - startY;
+      updateTransform();
+    }
+  });
+
+  document.addEventListener("touchend", function () {
+    isDragging = false;
+  });
+
+  // Pinch zoom for mobile
+  let initialDistance = 0;
+  let initialScale = 1;
+
+  document.addEventListener("touchstart", function (e) {
+    if (e.touches.length === 2) {
+      initialDistance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialScale = scale;
+    }
+  });
+
+  document.addEventListener(
+    "touchmove",
+    function (e) {
+      if (e.touches.length === 2) {
+        const currentDistance = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+
+        const newScale = initialScale * (currentDistance / initialDistance);
+
+        if (newScale >= 0.5 && newScale <= 3) {
+          scale = newScale;
+          updateTransform();
+        }
+
+        e.preventDefault();
+      }
+    },
+    { passive: false }
+  );
 }
 
 function initialize3DModels() {
