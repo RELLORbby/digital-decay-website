@@ -6,27 +6,37 @@
     <title>Decay Project - Updated</title>
     <link rel="stylesheet" href="index.css" />
   </head>
+  <style>
+    .img-svg {
+      opacity: 0;
+      transition: opacity 2s ease-in;
+    }
+
+    .fade-in {
+      opacity: 1;
+    }
+  </style>
   <body>
     <div class="svg-container" id="svgContainer">
       <!-- Top SVG: Decay -->
       <div class="draggable" id="decaySvg" draggable="true">
         <div class="tooltip">Decay Interactive Game</div>
-        <img src="assets/svgs/decay.svg" alt="Decay" />
+        <img class="img-svg" src="assets/svgs/decay.svg" alt="Decay" />
       </div>
 
       <!-- Bottom row with 3 SVGs -->
       <div class="row">
         <div class="draggable" id="blockSvg" draggable="true">
           <div class="tooltip">3D Models Gallery</div>
-          <img src="assets/svgs/3d-block.svg" alt="3D Block" />
+          <img class="img-svg" src="assets/svgs/3d-block.svg" alt="3D Block" />
         </div>
         <div class="draggable" id="gridSvg" draggable="true">
           <div class="tooltip">Leaflet</div>
-          <img src="assets/svgs/grid.svg" alt="Grid" />
+          <img class="img-svg" src="assets/svgs/grid.svg" alt="Grid" />
         </div>
         <div class="draggable" id="timerSvg" draggable="true">
           <div class="tooltip">Animation</div>
-          <img src="assets/svgs/timer.svg" alt="Timer" />
+          <img class="img-svg" src="assets/svgs/timer.svg" alt="Timer" />
         </div>
       </div>
     </div>
@@ -38,13 +48,13 @@
     <img
       src="assets/svgs/save.svg"
       alt="Save"
-      class="action-icon"
+      class="action-icon img-svg"
       id="saveIcon"
     />
     <img
       src="assets/svgs/delete.svg"
       alt="Delete"
-      class="action-icon"
+      class="action-icon img-svg"
       id="deleteIcon"
     />
 
@@ -97,5 +107,12 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
     <script src="index.js"></script>
+    <script>
+      window.addEventListener("load", () => {
+        document.querySelectorAll(".img-svg").forEach((img) => {
+          img.classList.add("fade-in");
+        });
+      });
+    </script>
   </body>
 </html>
