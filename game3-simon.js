@@ -1,150 +1,217 @@
-// Game 3: Simon Says
+// Game 3: Simon Says - Rewritten to match Python version
 let simonGame = null;
 let simonAnimationFrame = null;
 
 function initializeSimonGame() {
   simonGame = {
     // Game states
-    SHOWING_SEQUENCE: "showing",
-    WAITING_FOR_PLAYER: "waiting",
-    SHOWING_RESULT: "result",
+    SHOWING_SEQUENCE: 0,
+    WAITING_FOR_PLAYER: 1,
+    SHOWING_RESULT: 2,
 
     // Current state and data
-    sequences: [
-      ["w", "a", "s"],
-      ["q", "e", "r"],
-      ["a", "s", "d", "f"],
-      ["z", "x", "c"],
-      ["w", "w", "s", "s"],
-      ["a", "d", "a", "d"],
-    ],
-    currentSequence: [],
-    currentSequenceWithInstructions: [], // Store if each item is "Computer says" or not
-    userInput: [],
-    expectedUserInput: [], // Keys the user SHOULD press (only "Computer says" ones)
-    stage: "showing", // Current game state
-    currentInstructionIndex: 0,
-    instructionTimer: null,
+    state: 0, // Start with showing sequence
+    sequence: [], // List of sequence items (key and whether player should press)
+    playerKeys: [], // Keys the player has pressed
+    expectedPlayerKeys: [], // Keys the player SHOULD press (only "Computer says" ones)
+    sequenceIndex: 0,
+    nextItemTime: 0,
+    sequenceDelay: 0.8, // Seconds between keys in sequence
     level: 1,
     score: 0,
 
+    // For timeout after player input
+    lastKeyTime: 0,
+    playerTimeout: 3.0, // Seconds to wait after last key press
+    isTimeoutActive: false,
+
     // Animation frame tracking
-    animationFrame: 10000, // Fixed animation frame based on decay level
+    currentFrame: 10000, // Starting frame index (10000)
+    totalFrames: 11381, // Ending frame index (11381)
+    frameRange: 1381, // Total number of frames in animation sequence (11381-10000)
+    targetFrame: 10000, // Target frame to animate towards
+    animationSpeed: 300, // Speed of frame transition (lower = faster)
+    lastFrameTime: 0, // Last time the frame was updated,
+
+    // Instructions
+    correctPrefix: "Computer says press",
+    wrongPrefix: "Press",
+    currentInstruction: "",
+
+    // Result messaging
+    resultMessage: "",
+    resultDisplayTime: 0,
+    resultDuration: 1.5, // How long to show result message
+
+    // Decay adjustment amounts
+    correctDecayBonus: 5.0,
+    wrongDecayPenalty: -5.0,
+
+    // Map decay level to animation frame
+    // 100% decay = frame 10000 (start of animation)
+    // 0% decay = frame 11381 (end of animation)
+    decayToFrame: function (decayLevel) {
+      return Math.floor(10000 + (1 - decayLevel / 100) * this.frameRange);
+    },
   };
 
-  // Set up back button event listener
+  // Available keys for Simon Says
+  simonGame.keys = [
+    {
+      key: "w",
+      keyCode: 87,
+      name: "W",
+      color: "#FF0000",
+      isLit: false,
+      litTime: 0,
+      litDuration: 0.5,
+    },
+    {
+      key: "a",
+      keyCode: 65,
+      name: "A",
+      color: "#00FF00",
+      isLit: false,
+      litTime: 0,
+      litDuration: 0.5,
+    },
+    {
+      key: "s",
+      keyCode: 83,
+      name: "S",
+      color: "#0000FF",
+      isLit: false,
+      litTime: 0,
+      litDuration: 0.5,
+    },
+    {
+      key: "d",
+      keyCode: 68,
+      name: "D",
+      color: "#FFFF00",
+      isLit: false,
+      litTime: 0,
+      litDuration: 0.5,
+    },
+  ];
+
+  // Create mapping of key codes to indices
+  simonGame.keyMap = {};
+  simonGame.keys.forEach((key, index) => {
+    simonGame.keyMap[key.keyCode] = index;
+    simonGame.keyMap[key.key] = index;
+  });
+
+  // Set up back button event listeners properly
   const backButton = document.querySelector("#game3 .back-button");
   if (backButton) {
-    backButton.addEventListener("click", handleBackButton);
+    // Use multiple approaches to ensure it works
+    // backButton.removeEventListener("click", handleBackButton);
+    backButton.removeEventListener("click", goToMain);
+
+    backButton.addEventListener("click", function (e) {
+      console.log("Simon Says Back button clicked");
+      cleanupSimonGame();
+      goToMain();
+    });
+
+    // Also set the direct onclick property
+    backButton.onclick = function (e) {
+      console.log("Simon Says back button clicked (from onclick)");
+      cleanupSimonGame();
+      goToMain();
+      return false;
+    };
+
+    // Ensure it has the correct HTML attributes
+    backButton.setAttribute(
+      "onclick",
+      "cleanupSimonGame(); goToMain(); return false;"
+    );
   }
 
-  startSimonRound();
+  // Initialize animation with current decay level
+  simonGame.targetFrame = simonGame.decayToFrame(window.decayLevel);
+  simonGame.currentFrame = simonGame.targetFrame;
+  simonGame.lastFrameTime = Date.now();
+
+  // Start new level
+  startNewLevel();
   updateSimonAnimation();
 }
 
-function startSimonRound() {
-  // Clear any existing timers
-  if (simonGame.instructionTimer) {
-    clearTimeout(simonGame.instructionTimer);
-    simonGame.instructionTimer = null;
+function startNewLevel(isReset = false) {
+  // Reset level and score if needed
+  if (isReset) {
+    simonGame.level = 1;
+    simonGame.score = 0;
   }
 
-  // Choose random sequence
-  simonGame.currentSequence =
-    simonGame.sequences[Math.floor(Math.random() * simonGame.sequences.length)];
+  // Generate sequence for this level
+  simonGame.sequence = [];
+  simonGame.expectedPlayerKeys = [];
 
-  // Reset game state
-  simonGame.userInput = [];
-  simonGame.expectedUserInput = [];
-  simonGame.currentSequenceWithInstructions = [];
-  simonGame.stage = simonGame.SHOWING_SEQUENCE;
-  simonGame.currentInstructionIndex = 0;
+  // Sequence length based on level (minimum 3 items)
+  const sequenceLength = Math.max(3, simonGame.level + 2);
 
-  // Set fixed animation frame based on decay level (but don't change it during the round)
-  simonGame.animationFrame =
-    10000 + Math.floor((1 - window.decayLevel / 100) * 1381);
+  for (let i = 0; i < sequenceLength; i++) {
+    // Random key index
+    const keyIdx = Math.floor(Math.random() * simonGame.keys.length);
+    // 70% chance of "Computer says" (player should press)
+    const shouldPress = Math.random() < 0.7;
 
-  // Clear previous displays
-  document.getElementById("simonSequence").innerHTML = "";
-  document.getElementById("simonStatus").textContent = "";
-
-  console.log("Starting new Simon Says round");
-  console.log("Current sequence:", simonGame.currentSequence);
-
-  // For each key in the sequence, decide if it's "Computer says" or not
-  for (let i = 0; i < simonGame.currentSequence.length; i++) {
-    // 70% chance of "Computer says" (player should follow)
-    const isComputerSays = Math.random() < 0.7;
-    simonGame.currentSequenceWithInstructions.push({
-      key: simonGame.currentSequence[i],
-      isComputerSays: isComputerSays,
+    // Add to sequence
+    simonGame.sequence.push({
+      keyIdx: keyIdx,
+      shouldPress: shouldPress,
     });
 
-    // If it's "Computer says", add to expected inputs
-    if (isComputerSays) {
-      simonGame.expectedUserInput.push(simonGame.currentSequence[i]);
+    // If this is a "Computer says" item, add to expected keys
+    if (shouldPress) {
+      simonGame.expectedPlayerKeys.push(keyIdx);
     }
   }
 
-  // Make sure there's at least one key to press if all were "Press" by chance
+  // Ensure there's at least one key to press
   if (
-    simonGame.expectedUserInput.length === 0 &&
-    simonGame.currentSequence.length > 0
+    simonGame.expectedPlayerKeys.length === 0 &&
+    simonGame.sequence.length > 0
   ) {
     // Convert the first item to "Computer says"
-    simonGame.currentSequenceWithInstructions[0].isComputerSays = true;
-    simonGame.expectedUserInput.push(simonGame.currentSequence[0]);
+    simonGame.sequence[0].shouldPress = true;
+    simonGame.expectedPlayerKeys.push(simonGame.sequence[0].keyIdx);
   }
 
+  // Reset player keys and sequence index
+  simonGame.playerKeys = [];
+  simonGame.sequenceIndex = 0;
+
+  // Set state to showing sequence
+  simonGame.state = simonGame.SHOWING_SEQUENCE;
+  simonGame.nextItemTime = Date.now() + 500; // Start after 0.5s delay
+
+  // Clear instruction
+  simonGame.currentInstruction = "Watch the sequence...";
+
+  // Debug info
+  console.log("New level " + simonGame.level + " sequence created:");
+  simonGame.sequence.forEach((item, i) => {
+    const prefix = item.shouldPress ? "Computer says" : "Press only";
+    console.log(`  ${i + 1}: ${prefix} ${simonGame.keys[item.keyIdx].name}`);
+  });
   console.log(
-    "Sequence with instructions:",
-    simonGame.currentSequenceWithInstructions
+    "Expected player keys:",
+    simonGame.expectedPlayerKeys.map((idx) => simonGame.keys[idx].name)
   );
-  console.log("Expected user input:", simonGame.expectedUserInput);
 
-  // Start showing instructions one by one
-  showNextInstruction();
-}
-
-function showNextInstruction() {
-  if (
-    simonGame.currentInstructionIndex >=
-    simonGame.currentSequenceWithInstructions.length
-  ) {
-    // All instructions shown, now ask for space press
-    const instruction = document.getElementById("simonInstruction");
-    instruction.textContent =
-      "Press SPACE when you have remembered the sequence";
-    instruction.style.color = "#b8d3a7";
-    simonGame.stage = "waitingForSpace";
-    return;
+  // Clear the sequence display
+  const sequenceDisplay = document.getElementById("simonSequence");
+  if (sequenceDisplay) {
+    sequenceDisplay.innerHTML = "";
   }
 
-  const currentItem =
-    simonGame.currentSequenceWithInstructions[
-      simonGame.currentInstructionIndex
-    ];
-  const currentKey = currentItem.key;
-  const isComputerSays = currentItem.isComputerSays;
-
-  const instruction = document.getElementById("simonInstruction");
-
-  if (isComputerSays) {
-    instruction.textContent = `Computer says press "${currentKey.toUpperCase()}"`;
-    instruction.style.color = "#8fb889"; // Green for "Computer says"
-  } else {
-    instruction.textContent = `Press "${currentKey.toUpperCase()}"`;
-    instruction.style.color = "#ff8888"; // Red for regular "Press" (to be ignored)
-  }
-
-  // Don't show any visual keys - only the spoken instruction
-
-  simonGame.currentInstructionIndex++;
-
-  // Show next instruction after 1.5 seconds
-  simonGame.instructionTimer = setTimeout(() => {
-    showNextInstruction();
-  }, 1500);
+  // Clear status
+  document.getElementById("simonStatus").textContent = "";
 }
 
 function updateSimonAnimation() {
@@ -156,230 +223,453 @@ function updateSimonAnimation() {
     return;
   }
 
-  // Use the fixed animation frame set at the start of the round
-  // This matches the Python version where animation frame is synced to decay level
-  // but doesn't change during the round
-  const frameStr = simonGame.animationFrame.toString().padStart(5, "0");
-  const imagePath = `assets/blender/animation/rerender/DISSOLVE0001_${frameStr}.png`;
-
-  const animationDiv = document.getElementById("simonAnimation");
-  if (animationDiv) {
-    animationDiv.style.backgroundImage = `url(${imagePath})`;
-    animationDiv.style.backgroundSize = "contain";
-    animationDiv.style.backgroundRepeat = "no-repeat";
-    animationDiv.style.backgroundPosition = "center";
-  }
-
-  // Continue animation loop but don't change frame during round
+  // Continue the animation loop
   simonAnimationFrame = requestAnimationFrame(updateSimonAnimation);
-}
 
-function startInputPhase() {
-  simonGame.stage = simonGame.WAITING_FOR_PLAYER;
-
-  // Update UI text
-  document.getElementById("simonInstruction").textContent =
-    "Now type the sequence you remember!";
-  document.getElementById("simonInstruction").style.color = "#b8d3a7";
-
-  document.getElementById("simonStatus").textContent =
-    "Waiting for your input...";
-  document.getElementById("simonStatus").style.color = "#b8d3a7";
-
-  // Reset input tracking
-  simonGame.userInput = [];
-
-  // Add note about expected keys for debugging
-  console.log(
-    "Starting input phase. Expected keys:",
-    simonGame.expectedUserInput
-  );
-
-  // Add instruction about space key
-  if (simonGame.expectedUserInput.length > 0) {
-    document.getElementById("simonStatus").textContent +=
-      " Press SPACE when done.";
-  } else {
-    document.getElementById("simonStatus").textContent +=
-      " (Hint: Were there any 'Computer says' instructions?)";
-  }
-}
-
-function checkSimonAnswer() {
-  // Clear any remaining timers
-  if (simonGame.instructionTimer) {
-    clearTimeout(simonGame.instructionTimer);
-    simonGame.instructionTimer = null;
-  }
-
-  console.log("Checking Simon answer...");
-  console.log("User input:", simonGame.userInput);
-  console.log("Expected input:", simonGame.expectedUserInput);
-
-  // Case 1: No keys expected (no "Computer says" instructions)
-  if (simonGame.expectedUserInput.length === 0) {
-    if (simonGame.userInput.length === 0) {
-      // Correct - user didn't press any keys when none were expected
-      document.getElementById("simonStatus").textContent =
-        "Correct! You didn't follow the wrong instructions!";
-      document.getElementById("simonStatus").style.color = "#44ff44";
-      adjustDecay(5); // Significant bonus for correct answer
-      showNextLevelMessage();
-    } else {
-      // Wrong - user pressed keys when they should have ignored all instructions
-      document.getElementById("simonStatus").textContent =
-        "Wrong! Computer didn't say to do that!";
-      document.getElementById("simonStatus").style.color = "#ff4444";
-      adjustDecay(-5); // Significant penalty
-      showTryAgainMessage();
+  // Update all keys (check if any lit keys need to be turned off)
+  const currentTime = Date.now();
+  simonGame.keys.forEach((key) => {
+    if (key.isLit && currentTime - key.litTime > key.litDuration * 1000) {
+      key.isLit = false;
     }
-    return;
-  }
+  });
 
-  // Case 2: Compare user input with expected input
-  let isCorrect = true;
+  // Handle game state updates
+  if (simonGame.state === simonGame.SHOWING_SEQUENCE) {
+    // Showing the sequence to the player
+    if (currentTime >= simonGame.nextItemTime) {
+      if (simonGame.sequenceIndex < simonGame.sequence.length) {
+        // Show next item in sequence
+        const sequenceItem = simonGame.sequence[simonGame.sequenceIndex];
 
-  // Check if user entered the correct number of keys
-  if (simonGame.userInput.length !== simonGame.expectedUserInput.length) {
-    isCorrect = false;
-  } else {
-    // Check if each key matches
-    for (let i = 0; i < simonGame.userInput.length; i++) {
-      if (simonGame.userInput[i] !== simonGame.expectedUserInput[i]) {
-        isCorrect = false;
-        break;
+        // Light up the key
+        lightUpKey(sequenceItem.keyIdx);
+
+        // Show instruction with appropriate prefix
+        const prefix = sequenceItem.shouldPress
+          ? simonGame.correctPrefix
+          : simonGame.wrongPrefix;
+        const keyName = simonGame.keys[sequenceItem.keyIdx].name;
+        simonGame.currentInstruction = `${prefix} ${keyName}`;
+
+        // Update instruction display
+        document.getElementById("simonInstruction").textContent =
+          simonGame.currentInstruction;
+        document.getElementById("simonInstruction").style.color =
+          sequenceItem.shouldPress ? "#8fb889" : "#ff8888";
+
+        // Add key to sequence display
+        const sequenceDisplay = document.getElementById("simonSequence");
+        const keyElement = document.createElement("div");
+        keyElement.className = "key-display";
+        keyElement.textContent = keyName;
+        keyElement.style.borderColor = sequenceItem.shouldPress
+          ? "#8fb889"
+          : "#ff8888";
+        sequenceDisplay.appendChild(keyElement);
+
+        // Highlight the key briefly
+        setTimeout(() => {
+          keyElement.style.backgroundColor = sequenceItem.shouldPress
+            ? "#8fb889"
+            : "#ff8888";
+          keyElement.style.color = "#000";
+
+          setTimeout(() => {
+            keyElement.style.backgroundColor = "#333";
+            keyElement.style.color = "#b8d3a7";
+          }, 500);
+        }, 300);
+
+        // Move to next item
+        simonGame.sequenceIndex++;
+        simonGame.nextItemTime = currentTime + simonGame.sequenceDelay * 1000;
+      } else {
+        // Finished showing sequence
+        simonGame.state = simonGame.WAITING_FOR_PLAYER;
+        simonGame.currentInstruction =
+          "Your turn! Press only the keys that had 'Computer says'";
+        document.getElementById("simonInstruction").textContent =
+          simonGame.currentInstruction;
+        document.getElementById("simonInstruction").style.color = "#b8d3a7";
+        simonGame.isTimeoutActive = false;
+
+        // Add space instruction if there are expected keys
+        if (simonGame.expectedPlayerKeys.length > 0) {
+          document.getElementById("simonStatus").textContent =
+            "Waiting for your input... Press SPACE when done.";
+        } else {
+          document.getElementById("simonStatus").textContent =
+            "Waiting for your input... (Hint: Were there any 'Computer says' instructions?)";
+        }
+        document.getElementById("simonStatus").style.color = "#b8d3a7";
+
+        // Clear the sequence display
+        document.getElementById("simonSequence").innerHTML = "";
+      }
+    }
+  } else if (simonGame.state === simonGame.WAITING_FOR_PLAYER) {
+    // Check for timeout after last key press
+    if (
+      simonGame.isTimeoutActive &&
+      currentTime >= simonGame.lastKeyTime + simonGame.playerTimeout * 1000
+    ) {
+      checkPlayerCompletion();
+      simonGame.isTimeoutActive = false;
+    }
+
+    // If timeout is active, show progress bar
+    if (simonGame.isTimeoutActive) {
+      const elapsed = (currentTime - simonGame.lastKeyTime) / 1000;
+      const remaining = Math.max(0, simonGame.playerTimeout - elapsed);
+      const percentage = (remaining / simonGame.playerTimeout) * 100;
+
+      // Update status text to show keys pressed
+      const pressedKeys = simonGame.playerKeys
+        .map((idx) => simonGame.keys[idx].name)
+        .join(" ");
+      document.getElementById(
+        "simonStatus"
+      ).textContent = `Keys pressed: ${pressedKeys} | Time left: ${remaining.toFixed(
+        1
+      )}s`;
+    }
+  } else if (simonGame.state === simonGame.SHOWING_RESULT) {
+    // Showing result message
+    if (
+      currentTime >=
+      simonGame.resultDisplayTime + simonGame.resultDuration * 1000
+    ) {
+      // Move to next level or restart
+      if (simonGame.resultMessage.includes("Correct")) {
+        // Start next level
+        simonGame.level += 1;
+        startNewLevel(false);
+      } else {
+        // Restart with level 1
+        startNewLevel(true);
       }
     }
   }
 
-  if (isCorrect) {
-    // Correct sequence
-    document.getElementById("simonStatus").textContent = "Correct! Well done!";
-    document.getElementById("simonStatus").style.color = "#44ff44";
-    adjustDecay(5); // Significant bonus
-    showNextLevelMessage();
-  } else {
-    // Wrong sequence
-    let message;
-    if (simonGame.userInput.length < simonGame.expectedUserInput.length) {
-      message = "Wrong! You missed some keys.";
-    } else if (
-      simonGame.userInput.length > simonGame.expectedUserInput.length
-    ) {
-      message = "Wrong! You pressed too many keys.";
-    } else {
-      message = "Wrong sequence! Try again!";
+  // Update target frame based on current decay level
+  simonGame.targetFrame = simonGame.decayToFrame(window.decayLevel);
+
+  const elapsed = currentTime - simonGame.lastFrameTime;
+
+  // Only update animation frame at the specified interval
+  if (elapsed > simonGame.animationSpeed) {
+    simonGame.lastFrameTime = currentTime;
+
+    // Smoothly animate towards target frame
+    if (simonGame.currentFrame < simonGame.targetFrame) {
+      // Moving forward in animation (increasing decay)
+      simonGame.currentFrame = Math.min(
+        simonGame.targetFrame,
+        simonGame.currentFrame +
+          Math.max(
+            1,
+            Math.floor((simonGame.targetFrame - simonGame.currentFrame) / 10)
+          )
+      );
+    } else if (simonGame.currentFrame > simonGame.targetFrame) {
+      // Moving backward in animation (decreasing decay)
+      simonGame.currentFrame = Math.max(
+        simonGame.targetFrame,
+        simonGame.currentFrame -
+          Math.max(
+            1,
+            Math.floor((simonGame.currentFrame - simonGame.targetFrame) / 10)
+          )
+      );
     }
 
-    document.getElementById("simonStatus").textContent = message;
-    document.getElementById("simonStatus").style.color = "#ff4444";
-    adjustDecay(-5); // Significant penalty
-    showTryAgainMessage();
+    // Format frame number correctly
+    const frameNum = Math.min(
+      11381,
+      Math.max(10000, Math.floor(simonGame.currentFrame))
+    );
+    const imagePath = `assets/blender/animation/rerender/DISSOLVE0001_${frameNum}.png`;
+
+    // Update the animation display
+    const animationDiv = document.getElementById("simonAnimation");
+    if (animationDiv) {
+      animationDiv.style.backgroundImage = `url(${imagePath})`;
+      animationDiv.style.backgroundSize = "contain";
+      animationDiv.style.backgroundRepeat = "no-repeat";
+      animationDiv.style.backgroundPosition = "center";
+    }
+
+    // Adjust animation speed based on decay level change rate
+    const decayChangeRate = Math.abs(
+      simonGame.targetFrame - simonGame.currentFrame
+    );
+    if (decayChangeRate > 1000) {
+      // Fast change - speed up animation
+      simonGame.animationSpeed = 50; // Very fast
+    } else if (decayChangeRate > 500) {
+      simonGame.animationSpeed = 100; // Fast
+    } else if (decayChangeRate > 100) {
+      simonGame.animationSpeed = 150; // Medium
+    } else {
+      simonGame.animationSpeed = 300; // Normal speed
+    }
   }
 }
 
-function showNextLevelMessage() {
-  document.getElementById("simonInstruction").textContent =
-    "Level complete! Next level starting soon...";
-  document.getElementById("simonInstruction").style.color = "#44ff44";
+function lightUpKey(keyIdx) {
+  if (keyIdx >= 0 && keyIdx < simonGame.keys.length) {
+    simonGame.keys[keyIdx].isLit = true;
+    simonGame.keys[keyIdx].litTime = Date.now();
 
-  // Start new round after delay
-  simonGame.stage = simonGame.SHOWING_RESULT;
+    // Display the key press visually in UI
+    const keyElement = document.createElement("div");
+    keyElement.className = "key-display";
+    keyElement.textContent = simonGame.keys[keyIdx].name;
+    keyElement.style.backgroundColor = simonGame.keys[keyIdx].color;
+    keyElement.style.color = "#000";
 
-  // Update level for next round
-  simonGame.level += 1;
-
-  setTimeout(() => {
-    startSimonRound();
-  }, 2500);
+    // Add flash effect
+    setTimeout(() => {
+      keyElement.style.backgroundColor = "#333";
+      keyElement.style.color = "#b8d3a7";
+    }, 300);
+  }
 }
 
-function showTryAgainMessage() {
-  document.getElementById("simonInstruction").textContent =
-    "Incorrect. Try again with a new sequence...";
-  document.getElementById("simonInstruction").style.color = "#ff4444";
+function checkPlayerCompletion() {
+  // If there are no expected keys
+  if (simonGame.expectedPlayerKeys.length === 0) {
+    if (simonGame.playerKeys.length === 0) {
+      // Correct - player didn't press any keys
+      simonGame.resultMessage = "Correct! You correctly didn't press any keys.";
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#44ff44";
+      adjustDecay(simonGame.correctDecayBonus);
+    } else {
+      // Wrong - player pressed keys when they shouldn't have
+      simonGame.resultMessage = "Wrong! You shouldn't have pressed any keys.";
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#ff4444";
+      adjustDecay(simonGame.wrongDecayPenalty);
+    }
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    return;
+  }
 
-  // Reset to level 1 after failure
-  simonGame.stage = simonGame.SHOWING_RESULT;
-  simonGame.level = 1;
+  // If player pressed fewer keys than expected
+  if (simonGame.playerKeys.length < simonGame.expectedPlayerKeys.length) {
+    // Check if the keys they did press were correct
+    let correctSoFar = true;
+    for (let i = 0; i < simonGame.playerKeys.length; i++) {
+      if (simonGame.playerKeys[i] !== simonGame.expectedPlayerKeys[i]) {
+        correctSoFar = false;
+        break;
+      }
+    }
 
-  // Start new round after delay
+    if (correctSoFar) {
+      // They pressed the right keys, just not all of them
+      const missedKeys =
+        simonGame.expectedPlayerKeys.length - simonGame.playerKeys.length;
+      simonGame.resultMessage = `Incorrect! You missed ${missedKeys} key(s).`;
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#ff4444";
+      adjustDecay(simonGame.wrongDecayPenalty / 2); // Smaller penalty
+    } else {
+      // They pressed the wrong keys
+      simonGame.resultMessage = "Wrong! You pressed the wrong keys.";
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#ff4444";
+      adjustDecay(simonGame.wrongDecayPenalty);
+    }
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    return;
+  }
+
+  // If player pressed exactly the right keys
+  if (simonGame.playerKeys.length === simonGame.expectedPlayerKeys.length) {
+    let allCorrect = true;
+    for (let i = 0; i < simonGame.playerKeys.length; i++) {
+      if (simonGame.playerKeys[i] !== simonGame.expectedPlayerKeys[i]) {
+        allCorrect = false;
+        break;
+      }
+    }
+
+    if (allCorrect) {
+      // Player got all keys correct
+      simonGame.score += simonGame.expectedPlayerKeys.length * 10;
+      simonGame.resultMessage = "Correct! Level complete!";
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#44ff44";
+      adjustDecay(simonGame.correctDecayBonus);
+    } else {
+      // Player pressed wrong keys
+      simonGame.resultMessage = "Wrong! You pressed the wrong keys.";
+      document.getElementById("simonStatus").textContent =
+        simonGame.resultMessage;
+      document.getElementById("simonStatus").style.color = "#ff4444";
+      adjustDecay(simonGame.wrongDecayPenalty);
+    }
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    return;
+  }
+
+  // If player pressed too many keys
+  if (simonGame.playerKeys.length > simonGame.expectedPlayerKeys.length) {
+    simonGame.resultMessage = "Wrong! You pressed too many keys.";
+    document.getElementById("simonStatus").textContent =
+      simonGame.resultMessage;
+    document.getElementById("simonStatus").style.color = "#ff4444";
+    adjustDecay(simonGame.wrongDecayPenalty);
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+  }
+}
+
+function handleKeyPress(keyCode, key) {
+  // Only process key presses when waiting for player input
+  if (simonGame.state !== simonGame.WAITING_FOR_PLAYER) {
+    return;
+  }
+
+  // Special case for SPACE key: player indicates they're done
+  if (keyCode === 32 || key === " ") {
+    console.log("Player pressed SPACE to indicate completion");
+    checkPlayerCompletion();
+    return;
+  }
+
+  // Map key to our key index
+  const keyIdx =
+    simonGame.keyMap[keyCode] || simonGame.keyMap[key.toLowerCase()];
+  if (keyIdx === undefined) {
+    return; // Not one of our Simon keys
+  }
+
+  // Light up the key
+  lightUpKey(keyIdx);
+
+  // Add to player keys
+  simonGame.playerKeys.push(keyIdx);
+
+  // Update last key time and activate timeout
+  simonGame.lastKeyTime = Date.now();
+  simonGame.isTimeoutActive = true;
+
+  // Display the key in the sequence UI
+  const sequenceDisplay = document.getElementById("simonSequence");
+  const keyElement = document.createElement("div");
+  keyElement.className = "key-display";
+  keyElement.textContent = simonGame.keys[keyIdx].name;
+  keyElement.style.borderColor = "#ffffff";
+  sequenceDisplay.appendChild(keyElement);
+
+  // Highlight the key briefly
+  keyElement.style.backgroundColor = "#ffffff";
+  keyElement.style.color = "#000";
   setTimeout(() => {
-    startSimonRound();
-  }, 2500);
+    keyElement.style.backgroundColor = "#333";
+    keyElement.style.color = "#b8d3a7";
+  }, 300);
+
+  // Log for debugging
+  const currentKeyIndex = simonGame.playerKeys.length - 1;
+  console.log(`Player pressed key: ${simonGame.keys[keyIdx].name}`);
+  console.log(
+    `Current index: ${currentKeyIndex}, Total expected: ${simonGame.expectedPlayerKeys.length}`
+  );
+
+  // Update keys pressed display
+  const pressedKeys = simonGame.playerKeys
+    .map((idx) => simonGame.keys[idx].name)
+    .join(" ");
+  document.getElementById(
+    "simonStatus"
+  ).textContent = `Keys pressed: ${pressedKeys}`;
+
+  // Check if there are expected keys to press
+  if (simonGame.expectedPlayerKeys.length === 0) {
+    simonGame.resultMessage =
+      "Wrong! There were no keys to press in this sequence.";
+    document.getElementById("simonStatus").textContent =
+      simonGame.resultMessage;
+    document.getElementById("simonStatus").style.color = "#ff4444";
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    adjustDecay(simonGame.wrongDecayPenalty);
+    return;
+  }
+
+  // Check if the player has pressed too many keys
+  if (simonGame.playerKeys.length > simonGame.expectedPlayerKeys.length) {
+    simonGame.resultMessage = "Wrong! You pressed too many keys.";
+    document.getElementById("simonStatus").textContent =
+      simonGame.resultMessage;
+    document.getElementById("simonStatus").style.color = "#ff4444";
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    adjustDecay(simonGame.wrongDecayPenalty);
+    return;
+  }
+
+  // Check if the current key is correct
+  const currentExpectedKey = simonGame.expectedPlayerKeys[currentKeyIndex];
+  if (keyIdx !== currentExpectedKey) {
+    // Wrong key pressed
+    console.log(
+      `Wrong key! Expected ${simonGame.keys[currentExpectedKey].name} but got ${simonGame.keys[keyIdx].name}`
+    );
+    simonGame.resultMessage = `Wrong! You pressed ${simonGame.keys[keyIdx].name} instead of ${simonGame.keys[currentExpectedKey].name}.`;
+    document.getElementById("simonStatus").textContent =
+      simonGame.resultMessage;
+    document.getElementById("simonStatus").style.color = "#ff4444";
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    adjustDecay(simonGame.wrongDecayPenalty);
+    return;
+  } else {
+    console.log(`Correct key: ${simonGame.keys[keyIdx].name}`);
+    // Give a small bonus for each correct key
+    adjustDecay(1.0);
+  }
+
+  // If player has pressed all expected keys
+  if (simonGame.playerKeys.length === simonGame.expectedPlayerKeys.length) {
+    // Sequence completed correctly
+    simonGame.score += simonGame.expectedPlayerKeys.length * 10;
+    simonGame.resultMessage = "Correct! Level complete!";
+    document.getElementById("simonStatus").textContent =
+      simonGame.resultMessage;
+    document.getElementById("simonStatus").style.color = "#44ff44";
+    simonGame.resultDisplayTime = Date.now();
+    simonGame.state = simonGame.SHOWING_RESULT;
+    adjustDecay(simonGame.correctDecayBonus);
+  }
 }
 
 // Cleanup function for when leaving Simon Says
 function cleanupSimonGame() {
-  if (simonGame && simonGame.instructionTimer) {
-    clearTimeout(simonGame.instructionTimer);
-    simonGame.instructionTimer = null;
-  }
-
+  console.log("Cleaning up Simon Says game");
   if (simonAnimationFrame) {
     cancelAnimationFrame(simonAnimationFrame);
     simonAnimationFrame = null;
   }
 }
 
-// Handle back button click - go back to main menu
-function handleBackButton() {
-  cleanupSimonGame();
-  goToMain();
-}
-
 // Process keyboard input for Simon Says
 document.addEventListener("keydown", (e) => {
   if (currentScreen !== "game3" || !simonGame) return;
 
-  // Handle space key for starting input phase
-  if (e.key === " " && simonGame.stage === "waitingForSpace") {
-    e.preventDefault();
-    startInputPhase();
-    return;
-  }
-
-  // Handle space key for submitting answer
-  if (e.key === " " && simonGame.stage === simonGame.WAITING_FOR_PLAYER) {
-    e.preventDefault();
-    checkSimonAnswer();
-    return;
-  }
-
-  // Handle letter keys during input phase
-  if (simonGame.stage === simonGame.WAITING_FOR_PLAYER) {
-    if (e.key.match(/[a-z]/i)) {
-      const key = e.key.toLowerCase();
-
-      // Add key to user input
-      simonGame.userInput.push(key);
-
-      // Update status to show what they've typed
-      const typedKeys = simonGame.userInput
-        .map((k) => k.toUpperCase())
-        .join(" ");
-
-      document.getElementById(
-        "simonStatus"
-      ).textContent = `You typed: ${typedKeys}`;
-
-      // If they've typed enough keys, auto-check the answer
-      if (
-        simonGame.userInput.length === simonGame.expectedUserInput.length &&
-        simonGame.expectedUserInput.length > 0
-      ) {
-        setTimeout(() => {
-          checkSimonAnswer();
-        }, 500);
-      }
-
-      // If they typed something when there are no expected keys,
-      // it's an immediate fail
-      if (simonGame.expectedUserInput.length === 0) {
-        setTimeout(() => {
-          checkSimonAnswer();
-        }, 500);
-      }
-    }
-  }
+  // Pass both keyCode and key to handle different browser implementations
+  handleKeyPress(e.keyCode, e.key);
 });

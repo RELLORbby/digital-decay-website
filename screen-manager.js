@@ -49,7 +49,7 @@ function showScreen(screenId) {
   } else if (screenId === "game1") {
     initializeGridGame();
   } else if (screenId === "game2") {
-    initializeBounceGame();
+    initializeButtonGame();
   } else if (screenId === "game3") {
     initializeSimonGame();
   } else if (screenId === "endScreen") {

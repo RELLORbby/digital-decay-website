@@ -6,6 +6,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+    <!-- Add global keypress handler BEFORE all other scripts -->
     <title>Decay Interactive Game</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -51,10 +52,12 @@
         <img
           src="assets/images/press_enter.png"
           alt="enter"
-          style="position: fixed; width: 20%; left: 40%; bottom: 23%"
+          style="position: fixed; width: 20%; left: 40%; bottom: 22.2%"
         />
       </div>
     </div>
+
+    <!-- Include rest of HTML unchanged... -->
 
     <!-- Main Screen -->
     <div id="mainScreen" class="screen main-screen">
@@ -149,7 +152,7 @@
           <img
             src="assets/images/press_enter.png"
             alt="enter"
-            style="position: fixed; width: 20%; left: 40%; bottom: 23%"
+            style="position: fixed; width: 20%; left: 40%; bottom: 22.2%"
           />
         </div>
       </div>
@@ -161,7 +164,7 @@
     <script src="decay-system.js"></script>
     <script src="floating-objects.js"></script>
     <script src="game1-grid.js"></script>
-    <script src="game2-bounce.js"></script>
+    <script src="game2-click.js"></script>
     <script src="game3-simon.js"></script>
     <script src="main.js"></script>
   </body>
