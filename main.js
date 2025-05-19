@@ -1,50 +1,6 @@
+// main.js - Simplified and focused on fixing the Enter key issue
+
 // Main game initialization and event handlers
-
-// Global key event handler that runs as soon as the script loads
-(function setupKeyHandlers() {
-  console.log("Setting up global key handlers immediately");
-
-  // Create a more robust key handler function
-  function handleKeyPress(e) {
-    console.log(
-      "Key pressed:",
-      e.key,
-      "KeyCode:",
-      e.keyCode,
-      "Current screen:",
-      currentScreen
-    );
-
-    // Handle start screen
-    if (
-      currentScreen === "startScreen" &&
-      (e.key === "Enter" || e.keyCode === 13)
-    ) {
-      console.log("Enter key detected on start screen! Moving to main screen");
-      showScreen("mainScreen");
-      return;
-    }
-
-    // Handle end screen
-    if (
-      currentScreen === "endScreen" &&
-      (e.key === "Enter" || e.keyCode === 13)
-    ) {
-      console.log("Enter key detected on end screen! Restarting game");
-      resetGame();
-      return;
-    }
-  }
-
-  // Add the event listener to both document and window
-  document.addEventListener("keydown", handleKeyPress);
-  window.addEventListener("keydown", handleKeyPress);
-
-  // Also handle keypress which might be more reliable in some browsers
-  document.addEventListener("keypress", handleKeyPress);
-  window.addEventListener("keypress", handleKeyPress);
-})();
-
 window.endCountdown = null;
 
 // End screen countdown
@@ -57,11 +13,15 @@ function startEndScreenCountdown() {
 
   let countdown = 30;
   const countdownElement = document.getElementById("countdown");
-  countdownElement.textContent = countdown;
+  if (countdownElement) {
+    countdownElement.textContent = countdown;
+  }
 
   window.endCountdown = setInterval(() => {
     countdown--;
-    countdownElement.textContent = countdown;
+    if (countdownElement) {
+      countdownElement.textContent = countdown;
+    }
 
     if (countdown <= 0) {
       clearInterval(window.endCountdown);
@@ -71,34 +31,37 @@ function startEndScreenCountdown() {
   }, 1000);
 }
 
+// Event listeners for key presses
+document.addEventListener("keydown", (e) => {
+  console.log("Key pressed:", e.key, "Current screen:", currentScreen);
+
+  // Handle start screen
+  if (currentScreen === "startScreen" && e.key === "Enter") {
+    console.log("Moving from start to main screen");
+    showScreen("mainScreen");
+    return;
+  }
+
+  // Handle end screen
+  if (currentScreen === "endScreen" && e.key === "Enter") {
+    console.log("Restarting game");
+    resetGame();
+    return;
+  }
+
+  // Note: Simon Says keyboard handling is in game3-simon.js
+});
+
 // Main screen click handler
 document.addEventListener("DOMContentLoaded", function () {
   // Wait for DOM to be ready before adding event listeners
   const mainScreen = document.getElementById("mainScreen");
   if (mainScreen) {
     mainScreen.addEventListener("click", () => {
-      console.log("Main screen clicked, starting random game");
-      startRandomGame();
-    });
-  }
-
-  // Add click handlers for start and end screens
-  const startScreen = document.getElementById("startScreen");
-  if (startScreen) {
-    startScreen.addEventListener("click", function () {
-      if (currentScreen === "startScreen") {
-        console.log("Start screen clicked - moving to main");
-        showScreen("mainScreen");
-      }
-    });
-  }
-
-  const endScreen = document.getElementById("endScreen");
-  if (endScreen) {
-    endScreen.addEventListener("click", function () {
-      if (currentScreen === "endScreen") {
-        console.log("End screen clicked - restarting game");
-        resetGame();
+      // Only trigger if we're actually on the main screen
+      if (currentScreen === "mainScreen") {
+        console.log("Main screen clicked, starting random game");
+        startRandomGame();
       }
     });
   }

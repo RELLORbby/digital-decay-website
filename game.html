@@ -6,7 +6,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
-    <!-- Add global keypress handler BEFORE all other scripts -->
+
+    <!-- Simple style to disable clicks on start screen elements -->
+    <style>
+      /* Make elements in the start screen non-interactive */
+      #startScreen img {
+        pointer-events: none;
+      }
+    </style>
+
     <title>Decay Interactive Game</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -49,15 +57,15 @@
           alt="box around enter"
           style="width: 27%; position: fixed; left: 37%; bottom: 20%"
         />
+
         <img
           src="assets/images/press_enter.png"
           alt="enter"
           style="position: fixed; width: 20%; left: 40%; bottom: 22.2%"
         />
+        <p>click screen then press enter</p>
       </div>
     </div>
-
-    <!-- Include rest of HTML unchanged... -->
 
     <!-- Main Screen -->
     <div id="mainScreen" class="screen main-screen">

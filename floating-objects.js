@@ -1,10 +1,13 @@
-// 3D Floating Objects System
+// Improved floating objects system
 let floatingScene, floatingCamera, floatingRenderer;
 let floating3DObjects = [];
 let floatingModels = []; // Store loaded models
 let floatingTimer = null;
 let modelsLoaded = 0;
 let totalModels = 7;
+
+// Store floating objects state between screens
+let savedObjectsState = null;
 
 function init3DFloatingObjects() {
   const container = document.getElementById("floatingObjects");
@@ -45,8 +48,19 @@ function init3DFloatingObjects() {
   directionalLight.position.set(5, 5, 5);
   floatingScene.add(directionalLight);
 
+  // Add second light from opposite side for better illumination
+  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+  directionalLight2.position.set(-5, -3, 10);
+  floatingScene.add(directionalLight2);
+
   // Load all OBJ models
-  loadFloatingModels();
+  if (savedObjectsState) {
+    console.log("Restoring floating objects state");
+    restoreFloatingObjectsState();
+  } else {
+    console.log("Loading new floating models");
+    loadFloatingModels();
+  }
 
   // Start animation loop
   animate3DFloatingObjects();
@@ -74,7 +88,7 @@ function loadFloatingModels() {
         function (object) {
           console.log(`Successfully loaded row${i}.obj`);
 
-          // Scale and prepare the model - Made bigger (1.5 instead of 0.5)
+          // Scale and prepare the model
           const box = new THREE.Box3().setFromObject(object);
           const size = box.getSize(new THREE.Vector3());
           const maxDim = Math.max(size.x, size.y, size.z);
@@ -102,6 +116,8 @@ function loadFloatingModels() {
 
           if (modelsLoaded === totalModels) {
             console.log("All models loaded successfully!");
+            // Create initial objects
+            createInitialFloatingObjects();
           }
         },
         function (progress) {
@@ -147,16 +163,16 @@ function createFallbackModel(rowNumber) {
   let geometry;
   switch (rowNumber % 4) {
     case 0:
-      geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5); // Made bigger
+      geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
       break;
     case 1:
-      geometry = new THREE.SphereGeometry(0.9, 8, 8); // Made bigger
+      geometry = new THREE.SphereGeometry(0.9, 8, 8);
       break;
     case 2:
-      geometry = new THREE.ConeGeometry(0.9, 1.5, 8); // Made bigger
+      geometry = new THREE.ConeGeometry(0.9, 1.5, 8);
       break;
     default:
-      geometry = new THREE.CylinderGeometry(0.6, 0.6, 1.5, 8); // Made bigger
+      geometry = new THREE.CylinderGeometry(0.6, 0.6, 1.5, 8);
   }
 
   const material = new THREE.MeshLambertMaterial({
@@ -173,6 +189,16 @@ function createFallbackModel(rowNumber) {
 
   if (modelsLoaded === totalModels) {
     console.log("All models (including fallbacks) loaded!");
+    // Create initial objects
+    createInitialFloatingObjects();
+  }
+}
+
+// Create initial objects
+function createInitialFloatingObjects() {
+  // Start with just 2 objects to avoid performance issues
+  for (let i = 0; i < 2; i++) {
+    createFloatingObject();
   }
 }
 
@@ -181,55 +207,44 @@ function getDecayStage(decayPercent) {
   return Math.max(1, Math.min(6, stageIndex + 1));
 }
 
-function createTextSprite(text, color = "#ffffff") {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d");
-  canvas.width = 512;
-  canvas.height = 192; // Taller canvas for 3 lines
+function createDashedLine(start, end, numDashes = 10) {
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  direction.normalize();
 
-  // Set consistent font size and family - use JetBrains Mono
-  context.font = 'Bold 24px "JetBrains Mono", "Courier New", monospace';
-  context.fillStyle = color;
-  context.textAlign = "left"; // Left align text
+  const dashLength = length / (numDashes * 2); // Each dash + gap
 
-  // Draw multi-line text with left alignment
-  const lines = text.split("\n");
-  const lineHeight = 40;
-  const startY = 40; // Start from top with some padding
-  const leftPadding = 20; // Left padding for text
+  const points = [];
+  let currentPos = 0;
+  let drawDash = true;
 
-  lines.forEach((line, index) => {
-    context.fillText(line, leftPadding, startY + index * lineHeight);
-  });
+  while (currentPos < length) {
+    if (drawDash) {
+      const startPoint = new THREE.Vector3()
+        .copy(start)
+        .addScaledVector(direction, currentPos);
+      const endPoint = new THREE.Vector3()
+        .copy(start)
+        .addScaledVector(direction, Math.min(currentPos + dashLength, length));
 
-  const texture = new THREE.CanvasTexture(canvas);
-  const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-  const sprite = new THREE.Sprite(spriteMaterial);
+      points.push(startPoint, endPoint);
+    }
 
-  // Fixed size for all text sprites regardless of object size
-  sprite.scale.set(3, 1.1, 1);
+    currentPos += dashLength;
+    drawDash = !drawDash;
+  }
 
-  return sprite;
-}
+  const geometry = new THREE.BufferGeometry().setFromPoints(points);
+  const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+  const line = new THREE.LineSegments(geometry, material);
 
-function createDashedLine(start, end) {
-  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
-  const material = new THREE.LineDashedMaterial({
-    color: 0xffffff,
-    linewidth: 2,
-    scale: 1,
-    dashSize: 0.1,
-    gapSize: 0.05,
-  });
-  const line = new THREE.Line(geometry, material);
-  line.computeLineDistances();
   return line;
 }
 
-function create3DFloatingObject() {
+function createFloatingObject(positionOverride = null) {
   if (floatingModels.length === 0) {
     console.log("No models available yet, waiting...");
-    return;
+    return null;
   }
 
   // Choose random model
@@ -245,79 +260,151 @@ function create3DFloatingObject() {
   const currentColor = getColorForDecay(row, col, window.decayLevel);
   const decayStage = getDecayStage(window.decayLevel);
 
-  // Position off-screen right
-  model.position.set(
-    8, // Start off-screen right
-    (Math.random() - 0.5) * 6, // Random Y position
-    (Math.random() - 0.5) * 2 // Random Z depth
-  );
+  // Position settings
+  let x, y, z;
+
+  if (positionOverride) {
+    x = positionOverride.x || 20;
+    y = positionOverride.y || (Math.random() - 0.5) * 6;
+    z = positionOverride.z || (Math.random() - 0.5) * 2;
+  } else {
+    // Start off-screen to the right
+    x = 20;
+    // Random Y position (constrained to visible area)
+    y = (Math.random() - 0.5) * 6;
+    // Random Z depth
+    z = (Math.random() - 0.5) * 2;
+  }
+
+  // Position model
+  model.position.set(0, 0, 0);
 
   // Random rotation
-  model.rotation.x = Math.random() * Math.PI * 2;
-  model.rotation.y = Math.random() * Math.PI * 2;
-  model.rotation.z = Math.random() * Math.PI * 2;
+  const rotation = {
+    x: Math.random() * Math.PI * 2,
+    y: Math.random() * Math.PI * 2,
+    z: Math.random() * Math.PI * 2,
+  };
 
-  // Create text showing grid position, color, and decay stage
-  const infoText = `Row: ${row + 1} Col: ${
-    col + 1
-  }\nColour: ${currentColor}\nDecay Stage: ${decayStage}`;
-  const textSprite = createTextSprite(infoText, "#ffffff");
+  model.rotation.set(rotation.x, rotation.y, rotation.z);
 
-  // Position text consistently regardless of object size
-  const textOffset = new THREE.Vector3(2.5, 1.5, 0.5);
-  textSprite.position.copy(textOffset);
-
-  // Create simple dashed line from bottom-left of text with fixed angle and length
-  const lineLength = 1.0; // Reduced from 1.5 to make the line shorter
-  const angle = Math.PI / 4; // 45 degree angle downward
-
-  // Calculate start point (bottom-left of text) - adjusted to be closer
-  const lineStart = new THREE.Vector3(
-    textOffset.x - 1.4, // Left edge of text (slightly closer to center)
-    textOffset.y - 0.45, // Bottom edge of text (slightly higher)
-    textOffset.z
+  // Create technical info label without background
+  const infoText = createTextSprite(
+    `Row: ${row + 1} Col: ${
+      col + 1
+    }\nColour: ${currentColor}\nDecay Stage: ${decayStage}`,
+    "#ffffff",
+    null // No background
   );
 
-  // Calculate end point with fixed angle and length
+  // Position label consistently
+  const labelOffset = new THREE.Vector3(2.5, 1.5, 0.5);
+  infoText.position.copy(labelOffset);
+
+  // Adjust the line position to match text better
+  // Move line start point closer to the text, accounting for no background padding
+  const lineStart = new THREE.Vector3(
+    labelOffset.x - 1.4, // Left side of text
+    labelOffset.y - 0.25, // Raised position - 0.45 → 0.25 to match text without padding
+    labelOffset.z
+  );
+
+  // Create line ending point
   const lineEnd = new THREE.Vector3(
-    lineStart.x - lineLength * Math.cos(angle), // Move left and down
-    lineStart.y - lineLength * Math.sin(angle), // Move down
+    lineStart.x - 1.0 * Math.cos(Math.PI / 4),
+    lineStart.y - 1.0 * Math.sin(Math.PI / 4),
     lineStart.z
   );
 
+  // Create dashed line
   const dashedLine = createDashedLine(lineStart, lineEnd);
 
-  // Create a group to hold the model, text, and line
+  // Create a group to hold model, label and line
   const objectGroup = new THREE.Group();
   objectGroup.add(model);
-  objectGroup.add(textSprite);
+  objectGroup.add(infoText);
   objectGroup.add(dashedLine);
 
-  // Position the entire group
-  objectGroup.position.copy(model.position);
-  model.position.set(0, 0, 0); // Reset model position relative to group
+  // Position the group in 3D space
+  objectGroup.position.set(x, y, z);
 
   // Add to scene
   floatingScene.add(objectGroup);
 
-  // Store with movement properties and fixed color/position data
-  floating3DObjects.push({
+  // Create object data structure
+  const floatingObject = {
     group: objectGroup,
     model: model,
-    textSprite: textSprite,
+    textSprite: infoText,
     dashedLine: dashedLine,
     row: row,
     col: col,
     color: currentColor,
     decayStage: decayStage,
-    textOffset: textOffset,
-    speedX: -0.02 - Math.random() * 0.03, // Move left
+    position: { x, y, z },
+    rotation: rotation,
+    // Use slower speed for smoother animation
+    speed: { x: -0.06 - Math.random() * 0.03 }, // Slightly randomized speed
     rotationSpeed: {
       x: (Math.random() - 0.5) * 0.02,
       y: (Math.random() - 0.5) * 0.02,
       z: (Math.random() - 0.5) * 0.02,
     },
+    labelOffset: labelOffset,
+    lineStart: lineStart, // Store for later updates
+    lineEnd: lineEnd,
+  };
+
+  floating3DObjects.push(floatingObject);
+  return floatingObject;
+}
+
+function createTextSprite(text, color = "#ffffff", backgroundColor = null) {
+  // Create a canvas
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.width = 512;
+  canvas.height = 192; // Taller for multiple lines
+
+  // Clear canvas with transparent background
+  context.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Only draw background if requested (we'll set it to null by default)
+  if (backgroundColor) {
+    context.fillStyle = backgroundColor;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Set text properties
+  context.font = 'Bold 24px "JetBrains Mono", "Courier New", monospace';
+  context.fillStyle = color;
+  context.textAlign = "left";
+
+  // Draw multi-line text
+  const lines = text.split("\n");
+  const lineHeight = 40;
+  const startY = 40;
+  const leftPadding = 20;
+
+  lines.forEach((line, index) => {
+    context.fillText(line, leftPadding, startY + index * lineHeight);
   });
+
+  // Create texture from canvas
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.needsUpdate = true;
+
+  // Create sprite material with transparency
+  const spriteMaterial = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+  });
+  const sprite = new THREE.Sprite(spriteMaterial);
+
+  // Set consistent size
+  sprite.scale.set(3, 1.1, 1);
+
+  return sprite;
 }
 
 function animate3DFloatingObjects() {
@@ -329,72 +416,241 @@ function animate3DFloatingObjects() {
   for (let i = floating3DObjects.length - 1; i >= 0; i--) {
     const obj = floating3DObjects[i];
 
-    // Move left
-    obj.group.position.x += obj.speedX;
+    // Move left based on speed
+    obj.group.position.x += obj.speed.x;
 
-    // Rotate only the model, not the text
+    // Update position data for state saving
+    obj.position.x = obj.group.position.x;
+
+    // Rotate the model
     obj.model.rotation.x += obj.rotationSpeed.x;
     obj.model.rotation.y += obj.rotationSpeed.y;
     obj.model.rotation.z += obj.rotationSpeed.z;
 
+    // Update rotation data for state saving
+    obj.rotation.x = obj.model.rotation.x;
+    obj.rotation.y = obj.model.rotation.y;
+    obj.rotation.z = obj.model.rotation.z;
+
     // Keep text facing camera
     obj.textSprite.lookAt(floatingCamera.position);
 
+    updateTextAndLine(obj);
+
     // Update the text if decay level changes
-    const newColor = getColorForDecay(obj.row, obj.col, window.decayLevel);
+    /* const newColor = getColorForDecay(obj.row, obj.col, window.decayLevel);
     const newDecayStage = getDecayStage(window.decayLevel);
 
     if (newColor !== obj.color || newDecayStage !== obj.decayStage) {
       obj.color = newColor;
       obj.decayStage = newDecayStage;
+
+      // Update text with new color/stage info
       const newText = `Row: ${obj.row + 1} Col: ${
         obj.col + 1
       }\nColour: ${newColor}\nDecay Stage: ${newDecayStage}`;
 
-      // Update text sprite with consistent formatting and font
-      const canvas = document.createElement("canvas");
-      const context = canvas.getContext("2d");
-      canvas.width = 512;
-      canvas.height = 192;
+      // Create new text sprite
+      const newTextSprite = createTextSprite(newText, "#ffffff");
+      newTextSprite.position.copy(obj.labelOffset);
+      newTextSprite.lookAt(floatingCamera.position);
 
-      context.font = 'Bold 24px "JetBrains Mono", "Courier New", monospace'; // Updated font
-      context.fillStyle = "#ffffff";
-      context.textAlign = "left"; // Left align text
+      // Replace old sprite with new one
+      obj.group.remove(obj.textSprite);
+      obj.group.add(newTextSprite);
 
-      // Draw multi-line text with left alignment
-      const lines = newText.split("\n");
-      const lineHeight = 40;
-      const startY = 40;
-      const leftPadding = 20;
+      // Clean up old sprite texture
+      if (obj.textSprite.material.map) {
+        obj.textSprite.material.map.dispose();
+      }
+      obj.textSprite.material.dispose();
 
-      lines.forEach((line, index) => {
-        context.fillText(line, leftPadding, startY + index * lineHeight);
-      });
-
-      obj.textSprite.material.map.dispose();
-      obj.textSprite.material.map = new THREE.CanvasTexture(canvas);
-      obj.textSprite.material.needsUpdate = true;
-    }
+      // Update reference
+      obj.textSprite = newTextSprite;
+    }*/
 
     // Remove if off-screen left
     if (obj.group.position.x < -8) {
       floatingScene.remove(obj.group);
 
-      // Clean up textures
-      obj.textSprite.material.map.dispose();
+      // Clean up textures and geometries
+      if (obj.textSprite.material.map) {
+        obj.textSprite.material.map.dispose();
+      }
       obj.textSprite.material.dispose();
-      obj.dashedLine.material.dispose();
-      obj.dashedLine.geometry.dispose();
+
+      if (obj.dashedLine.geometry) {
+        obj.dashedLine.geometry.dispose();
+      }
+      if (obj.dashedLine.material) {
+        obj.dashedLine.material.dispose();
+      }
 
       floating3DObjects.splice(i, 1);
+
+      // Random chance to create a new object to replace the removed one
+      if (Math.random() < 0.7 && floating3DObjects.length < 6) {
+        createFloatingObject();
+      }
     }
+  }
+
+  // Occasionally spawn new objects (with a lower chance)
+  if (Math.random() < 0.01 && floating3DObjects.length < 6) {
+    createFloatingObject();
   }
 
   // Render
   floatingRenderer.render(floatingScene, floatingCamera);
 }
 
-// Updated main floating objects function
+// Save the current state of all floating objects
+function saveFloatingObjectsState() {
+  if (!floating3DObjects || floating3DObjects.length === 0) {
+    console.log("No floating objects to save");
+    return;
+  }
+
+  console.log(`Saving state of ${floating3DObjects.length} floating objects`);
+
+  const state = floating3DObjects.map((obj) => ({
+    position: { ...obj.position },
+    rotation: { ...obj.rotation },
+    row: obj.row,
+    col: obj.col,
+    speed: { ...obj.speed },
+    rotationSpeed: { ...obj.rotationSpeed },
+    labelOffset: {
+      x: obj.labelOffset.x,
+      y: obj.labelOffset.y,
+      z: obj.labelOffset.z,
+    },
+  }));
+
+  savedObjectsState = state;
+}
+
+// Restore floating objects from saved state
+function restoreFloatingObjectsState() {
+  if (
+    !savedObjectsState ||
+    savedObjectsState.length === 0 ||
+    !floatingModels ||
+    floatingModels.length === 0
+  ) {
+    console.log("No saved state or models to restore");
+    createInitialFloatingObjects();
+    return;
+  }
+
+  console.log(`Restoring ${savedObjectsState.length} floating objects`);
+
+  savedObjectsState.forEach((objState) => {
+    // Skip offscreen objects
+    if (objState.position.x < -8) {
+      return;
+    }
+
+    // Find matching model by row
+    const matchingModelData = floatingModels.find(
+      (m) => m.row === objState.row
+    );
+    if (!matchingModelData) {
+      return;
+    }
+
+    // Clone the model
+    const model = matchingModelData.model.clone();
+
+    // Set model rotation
+    model.rotation.set(
+      objState.rotation.x,
+      objState.rotation.y,
+      objState.rotation.z
+    );
+
+    // Get color and stage
+    const currentColor = getColorForDecay(
+      objState.row,
+      objState.col,
+      window.decayLevel
+    );
+    const decayStage = getDecayStage(window.decayLevel);
+
+    // Create text sprite
+    const infoText = createTextSprite(
+      `Row: ${objState.row + 1} Col: ${
+        objState.col + 1
+      }\nColour: ${currentColor}\nDecay Stage: ${decayStage}`,
+      "#ffffff"
+    );
+
+    // Position label using saved offset
+    const labelOffset = new THREE.Vector3(
+      objState.labelOffset?.x || 2.5,
+      objState.labelOffset?.y || 1.5,
+      objState.labelOffset?.z || 0.5
+    );
+    infoText.position.copy(labelOffset);
+
+    // Create dashed line
+    const lineStart = new THREE.Vector3(
+      labelOffset.x - 1.4,
+      labelOffset.y - 0.45,
+      labelOffset.z
+    );
+
+    const lineEnd = new THREE.Vector3(
+      lineStart.x - 1.0 * Math.cos(Math.PI / 4),
+      lineStart.y - 1.0 * Math.sin(Math.PI / 4),
+      lineStart.z
+    );
+
+    const dashedLine = createDashedLine(lineStart, lineEnd);
+
+    // Create group and add all elements
+    const objectGroup = new THREE.Group();
+    objectGroup.add(model);
+    objectGroup.add(infoText);
+    objectGroup.add(dashedLine);
+
+    // Position the group
+    objectGroup.position.set(
+      objState.position.x,
+      objState.position.y,
+      objState.position.z
+    );
+
+    // Add to scene
+    floatingScene.add(objectGroup);
+
+    // Create object data structure
+    const floatingObject = {
+      group: objectGroup,
+      model: model,
+      textSprite: infoText,
+      dashedLine: dashedLine,
+      row: objState.row,
+      col: objState.col,
+      color: currentColor,
+      decayStage: decayStage,
+      position: { ...objState.position },
+      rotation: { ...objState.rotation },
+      speed: { ...objState.speed },
+      rotationSpeed: { ...objState.rotationSpeed },
+      labelOffset: labelOffset,
+    };
+
+    floating3DObjects.push(floatingObject);
+  });
+
+  // If no objects were restored (all were off-screen), create new ones
+  if (floating3DObjects.length === 0) {
+    createInitialFloatingObjects();
+  }
+}
+
+// Updated starting function
 function startFloatingObjects() {
   console.log("Starting floating objects...");
 
@@ -403,18 +659,26 @@ function startFloatingObjects() {
     init3DFloatingObjects();
   }
 
-  // Create floating objects periodically
-  floatingTimer = setInterval(() => {
-    if (currentScreen === "mainScreen") {
-      create3DFloatingObject();
-    }
-  }, 2000);
-
-  // Create first one immediately (with delay to allow models to load)
-  setTimeout(() => create3DFloatingObject(), 3000);
+  // Timer to occasionally create new objects (more controlled frequency)
+  if (floatingTimer === null) {
+    floatingTimer = setInterval(() => {
+      if (currentScreen === "mainScreen" && floating3DObjects.length < 6) {
+        if (Math.random() < 0.3) {
+          // Only 30% chance to create new object
+          createFloatingObject();
+        }
+      }
+    }, 3000); // Less frequent creation (every 3 seconds)
+  }
 }
 
 function stopFloatingObjects() {
+  // Save state before stopping
+  if (floating3DObjects && floating3DObjects.length > 0) {
+    saveFloatingObjectsState();
+  }
+
+  // Clear timer
   if (floatingTimer) {
     clearInterval(floatingTimer);
     floatingTimer = null;
@@ -426,10 +690,17 @@ function stopFloatingObjects() {
       floatingScene.remove(obj.group);
 
       // Clean up textures and materials
-      obj.textSprite.material.map.dispose();
+      if (obj.textSprite.material.map) {
+        obj.textSprite.material.map.dispose();
+      }
       obj.textSprite.material.dispose();
-      obj.dashedLine.material.dispose();
-      obj.dashedLine.geometry.dispose();
+
+      if (obj.dashedLine.geometry) {
+        obj.dashedLine.geometry.dispose();
+      }
+      if (obj.dashedLine.material) {
+        obj.dashedLine.material.dispose();
+      }
     });
     floating3DObjects = [];
   }
@@ -443,3 +714,77 @@ window.addEventListener("resize", () => {
     floatingRenderer.setSize(window.innerWidth, window.innerHeight);
   }
 });
+
+function updateTextSprite(obj, newText, color = "#ffffff") {
+  // Create new text sprite without background
+  const newTextSprite = createTextSprite(newText, color, null);
+  newTextSprite.position.copy(obj.labelOffset);
+  newTextSprite.lookAt(floatingCamera.position);
+
+  // Replace old sprite with new one
+  obj.group.remove(obj.textSprite);
+  obj.group.add(newTextSprite);
+
+  // Clean up old sprite texture
+  if (obj.textSprite.material.map) {
+    obj.textSprite.material.map.dispose();
+  }
+  obj.textSprite.material.dispose();
+
+  // Update reference
+  obj.textSprite = newTextSprite;
+}
+
+// This function should be integrated into the animate3DFloatingObjects function
+// Update the section where text sprite is updated with new color/stage info
+function updateTextAndLine(obj) {
+  const newColor = getColorForDecay(obj.row, obj.col, window.decayLevel);
+  const newDecayStage = getDecayStage(window.decayLevel);
+
+  if (newColor !== obj.color || newDecayStage !== obj.decayStage) {
+    obj.color = newColor;
+    obj.decayStage = newDecayStage;
+
+    // Update text with new color/stage info
+    const newText = `Row: ${obj.row + 1} Col: ${
+      obj.col + 1
+    }\nColour: ${newColor}\nDecay Stage: ${newDecayStage}`;
+    updateTextSprite(obj, newText, "#ffffff");
+
+    // Update line position if needed
+    if (obj.dashedLine) {
+      // Remove old line
+      obj.group.remove(obj.dashedLine);
+
+      // Create a new line with updated positions
+      const lineStart = new THREE.Vector3(
+        obj.labelOffset.x - 1.4,
+        obj.labelOffset.y - 0.25, // Adjusted higher position
+        obj.labelOffset.z
+      );
+
+      const lineEnd = new THREE.Vector3(
+        lineStart.x - 1.0 * Math.cos(Math.PI / 4),
+        lineStart.y - 1.0 * Math.sin(Math.PI / 4),
+        lineStart.z
+      );
+
+      // Create and add new dashed line
+      const newDashedLine = createDashedLine(lineStart, lineEnd);
+      obj.group.add(newDashedLine);
+
+      // Clean up old line resources
+      if (obj.dashedLine.geometry) {
+        obj.dashedLine.geometry.dispose();
+      }
+      if (obj.dashedLine.material) {
+        obj.dashedLine.material.dispose();
+      }
+
+      // Update reference
+      obj.dashedLine = newDashedLine;
+      obj.lineStart = lineStart;
+      obj.lineEnd = lineEnd;
+    }
+  }
+}

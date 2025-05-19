@@ -1,12 +1,25 @@
+// screen-manager.js - Updated to preserve state between transitions
+
 // Screen management system
 let currentScreen = "startScreen";
 
 function showScreen(screenId) {
   console.log("Switching from", currentScreen, "to", screenId);
 
+  // Remember the previous screen to handle state preservation
+  const previousScreen = currentScreen;
+
   // Cleanup when leaving Simon Says game
   if (currentScreen === "game3") {
     cleanupSimonGame();
+  }
+
+  // Save the state of the main screen floating objects when leaving
+  if (currentScreen === "mainScreen" && screenId !== "mainScreen") {
+    console.log("Saving floating objects state when leaving main screen");
+    if (typeof saveFloatingObjectsState === "function") {
+      saveFloatingObjectsState();
+    }
   }
 
   // Hide all screens
@@ -24,8 +37,7 @@ function showScreen(screenId) {
     return;
   }
 
-  // Stop floating objects and countdown, but NOT decay timer
-  stopFloatingObjects();
+  // Stop countdown timer, but not necessarily the decay timer
   if (window.endCountdown) {
     clearInterval(window.endCountdown);
     window.endCountdown = null;
@@ -34,6 +46,8 @@ function showScreen(screenId) {
   // Initialize screen-specific functionality
   if (screenId === "startScreen") {
     stopDecayTimer();
+    stopFloatingObjects();
+
     // Clear any existing particles first
     const particleContainer = document.getElementById("startParticles");
     if (particleContainer) {
@@ -42,7 +56,10 @@ function showScreen(screenId) {
     createStartParticles();
     createStartGlitchRectangles();
   } else if (screenId === "mainScreen") {
+    // When returning to main menu, use the saved state
     startFloatingObjects();
+
+    // Start decay timer if not already running
     if (!window.decayTimer) {
       startDecayTimer();
     }
@@ -54,6 +71,7 @@ function showScreen(screenId) {
     initializeSimonGame();
   } else if (screenId === "endScreen") {
     stopDecayTimer();
+    stopFloatingObjects();
     createGlitchRectangles();
     startEndScreenCountdown();
   }
@@ -245,8 +263,6 @@ function createStartParticles() {
 
 // Game navigation
 function goToMain() {
-  stopFloatingObjects();
-  // Don't stop decay timer here!
   showScreen("mainScreen");
 }
 
@@ -259,6 +275,12 @@ function resetGame() {
   window.decayLevel = 100;
   stopDecayTimer();
   stopFloatingObjects();
+
+  // Clear the saved state when resetting the game
+  if (typeof savedObjectsState !== "undefined") {
+    savedObjectsState = null;
+  }
+
   if (window.endCountdown) {
     clearInterval(window.endCountdown);
     window.endCountdown = null;
